@@ -1,0 +1,61 @@
+{
+  "name": "@evmlord/multicall-sdk",
+  "version": "0.0.1",
+  "description": "",
+  "main": "dist/index.js",
+  "source": "src/index.ts",
+  "scripts": {
+    "build": "tsc",
+    "typecheck": "tsc --noEmit",
+    "prepublishOnly": "yarn test && yarn build",
+    "test": "mocha -r ts-node/register \"test/**/*.spec.ts\" --exit"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/EVMlord/multicall-sdk.git"
+  },
+  "files": [
+    "dist/**/*",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "multicall",
+    "multicall3",
+    "batch-calls",
+    "ethers",
+    "ethers.js",
+    "ethereum",
+    "sdk"
+  ],
+  "author": {
+    "name": "EVMlord",
+    "email": "buidl@evmlord.dev",
+    "url": "https://github.com/EVMlord"
+  },
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/EVMlord/multicall-sdk/issues"
+  },
+  "homepage": "https://github.com/EVMlord/multicall-sdk#readme",
+  "publishConfig": {
+    "access": "public"
+  },
+  "peerDependencies": {
+    "ethers": "^6.13.0"
+  },
+  "dependencies": {},
+  "devDependencies": {
+    "@types/chai": "^5.2.2",
+    "@types/mocha": "^10.0.10",
+    "@types/node": "^22.15.23",
+    "@types/sinon": "^17.0.4",
+    "chai": "^5.2.0",
+    "ethers": "^6.13.0",
+    "mocha": "^11.5.0",
+    "sinon": "^20.0.0",
+    "ts-node": "^10.9.2",
+    "tsx": "^4.19.4",
+    "typescript": "^5.8.3"
+  }
+}

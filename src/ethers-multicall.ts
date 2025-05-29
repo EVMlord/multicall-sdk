@@ -98,7 +98,7 @@ class Multicall {
 
   /**
    * Low‐level wrapper around `eth_call`.
-   * @returns Whatever your ABI says this method returns, typed as T.
+   * @returns Whatever the ABI says this method returns, typed as T.
    */
   private async rpcCall<T extends any[]>(
     method: string,
@@ -125,7 +125,7 @@ class Multicall {
     calls: Call[]
   ): Promise<{ blockNumber: bigint; returnData: string[] }> {
     const payload = calls.map(({ contract, functionFragment, args }) => ({
-      target: contract.address,
+      target: contract.target,
       callData: contract.interface.encodeFunctionData(functionFragment, args),
     }));
 
@@ -149,7 +149,7 @@ class Multicall {
     calls: Call[]
   ): Promise<Array<[boolean, any]>> {
     const payload = calls.map(({ contract, functionFragment, args }) => ({
-      target: contract.address,
+      target: contract.target,
       callData: contract.interface.encodeFunctionData(functionFragment, args),
     }));
 
@@ -193,7 +193,7 @@ class Multicall {
     returnData: Array<[boolean, any]>;
   }> {
     const payload = calls.map(({ contract, functionFragment, args }) => ({
-      target: contract.address,
+      target: contract.target,
       callData: contract.interface.encodeFunctionData(functionFragment, args),
     }));
 
@@ -238,7 +238,7 @@ class Multicall {
   async aggregate3(calls: Call3[]): Promise<Array<[boolean, any]>> {
     const payload = calls.map(
       ({ contract, functionFragment, args, allowFailure }) => ({
-        target: contract.address,
+        target: contract.target,
         allowFailure,
         callData: contract.interface.encodeFunctionData(functionFragment, args),
       })
@@ -272,7 +272,7 @@ class Multicall {
   async aggregate3Value(calls: Call3Value[]): Promise<Array<[boolean, any]>> {
     const payload = calls.map(
       ({ contract, functionFragment, args, allowFailure, value }) => ({
-        target: contract.address,
+        target: contract.target,
         allowFailure,
         value,
         callData: contract.interface.encodeFunctionData(functionFragment, args),

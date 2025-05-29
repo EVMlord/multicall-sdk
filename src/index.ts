@@ -1,6 +1,9 @@
 // constants
 export * from "./constants";
 
+// ABI
+export { Multicall3ABI } from "./ABIs";
+
 // the Multicall class + its types
 export { default as Multicall } from "./ethers-multicall";
 

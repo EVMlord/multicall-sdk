@@ -1,0 +1,12 @@
+node_modules/
+*.log
+.env
+.vscode/
+.git/
+tests/
+src/
+tsconfig.json
+.npmignore
+yarn.lock
+scripts/
+link-out/

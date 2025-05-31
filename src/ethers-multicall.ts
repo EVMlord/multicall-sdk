@@ -65,6 +65,15 @@ export interface MulticallResult {
   returnData: string;
 }
 
+/** Type-guard for ethers.Result */
+function isEthersResult(x: any): x is EthersResult {
+  return (
+    x != null &&
+    typeof x.toObject === "function" &&
+    typeof x.toArray === "function"
+  );
+}
+
 /**
  * Multicall wraps the Multicall3 Solidity contract for batching on-chain calls.
  */
@@ -251,12 +260,39 @@ class Multicall {
     return rawResults.map((r, i) => {
       if (!r.success) return [false, r.returnData] as [boolean, any];
       try {
-        const dec = calls[i].contract.interface.decodeFunctionResult(
+        // decodeFunctionResult gives us a Result proxy
+        const decoded = calls[i].contract.interface.decodeFunctionResult(
           calls[i].functionFragment,
           r.returnData
         );
-        const vals = Array.isArray(dec) ? dec : Object.values(dec);
-        return [true, vals.length === 1 ? vals[0] : vals] as [boolean, any];
+
+        // If function has a *single* output, decoded.length === 1
+        const raw =
+          decoded.length === 1
+            ? decoded[0]
+            : // multiple outputs → toArray() gives [v0, v1, ...]
+              decoded.toArray(true);
+
+        // Now: if raw is a struct proxy → raw.toObject(true)
+        // if raw is an array of struct proxies → raw.map(r => r.toObject(true))
+        let plain: any;
+
+        if (isEthersResult(raw)) {
+          // single struct → plain object
+          plain = raw.toObject(true);
+        } else if (
+          Array.isArray(raw) &&
+          raw.length > 0 &&
+          isEthersResult(raw[0])
+        ) {
+          // array of structs → plain array of objects
+          plain = (raw as EthersResult[]).map((r) => r.toObject(true));
+        } else {
+          // primitives or tuples → already plain
+          plain = raw;
+        }
+
+        return [true, plain] as [boolean, any];
       } catch (err: any) {
         return [false, `Data handling error: ${err.message}`] as [boolean, any];
       }

@@ -1,18 +1,29 @@
 {
   "name": "@evmlord/multicall-sdk",
-  "version": "0.0.2",
+  "version": "0.0.3",
   "description": "A multichain lightweight library to process multiple calls via a single eth_call using Ethers JS.",
-  "main": "dist/index.js",
-  "source": "src/index.ts",
   "scripts": {
     "build": "tsc",
     "typecheck": "tsc --noEmit",
     "prepublishOnly": "yarn test && yarn build",
-    "test": "mocha -r ts-node/register \"test/**/*.spec.ts\" --exit"
+    "test": "mocha -r ts-node/register \"test/**/*.spec.ts\" --exit",
+    "dev:link": "node scripts/copy-files.mjs ../dist/ ../package.json ../README.md ../link-out/ --replace && (cd link-out && yarn link)",
+    "watch:link": "tsc -w & nodemon -q -e js,ts --exec \"yarn dev:link\""
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/EVMlord/multicall-sdk.git"
+  },
+  "main": "./dist/index.js",
+  "module": "./dist/index.js",
+  "types": "./dist/dts/index.d.ts",
+  "exports": {
+    ".": {
+      "import": "./dist/index.js",
+      "require": "./dist/index.js",
+      "types": "./dist/dts/index.d.ts",
+      "default": "./dist/index.js"
+    }
   },
   "files": [
     "dist/**/*",

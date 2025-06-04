@@ -65,13 +65,65 @@ export interface MulticallResult {
   returnData: string;
 }
 
-/** Type-guard for ethers.Result */
+/**
+ * Type-guard for ethers.Result
+ * A small “duck-typing” check for anything that looks like an ethers Result.
+ * In v6, a `Result` satisfies both of these at runtime:
+ */
 function isEthersResult(x: any): x is EthersResult {
   return (
     x != null &&
+    // Must have a toObject method (used for named structs)
     typeof x.toObject === "function" &&
+    // Must have a toArray method (used for unnamed tuples/arrays)
     typeof x.toArray === "function"
   );
+}
+
+/**
+ * Recursively “unwrap” anything returned by ethers.decodeFunctionResult (which is either
+ *   • an `EthersResult` proxy (for named structs, or tuple/tuple[]), or
+ *   • a plain JS array of primitive values, or
+ *   • a primitive (string, bigint, number, boolean, etc.)
+ *
+ * We want to end up with either:
+ *   • a plain { ... } object (for a named struct), OR
+ *   • a plain Array of primitives/objects, OR
+ *   • a plain primitive.
+ *
+ * NOTE: ethers.Result wants you to call `.toObject(true)` in order to convert a *named* struct
+ *       into a plain object with its named fields.  If you call `.toObject(true)` on something
+ *       that is *not* a named struct (e.g. it’s a `tuple[]`), ethers will throw, so we catch
+ *       that and fall back to `.toArray(false)`, which returns a plain Array of child Results.
+ */
+export function _fullyUnwrap(x: any): any {
+  // 1) Check: is `x` an ethers.Result (possibly a Proxy)?
+  if (isEthersResult(x)) {
+    try {
+      // --- CASE 1: named struct (or named‐struct[]) ---
+      // If `x` really is a named struct (or array of named structs),
+      // .toObject(true) will succeed:
+      return x.toObject(/* deep= */ true);
+    } catch (_err) {
+      // --- CASE 99: unnamed tuple or tuple[] ---
+      // It wasn’t a named struct, so treat it as an unnamed tuple or tuple[]:
+      const arr = x.toArray(/* deep= */ false);
+
+      // Recurse into each child, but pass along the same `cases` array:
+      return arr.map((child) => _fullyUnwrap(child));
+    }
+  }
+
+  // 2) If `x` is a plain JS array (Array.isArray(x) === true), we want to
+  //    recurse *into* each element. **Do not return `x` outright.**
+  if (Array.isArray(x)) {
+    // Recurse on every element, passing down the same `cases` array:
+    return x.map((child) => _fullyUnwrap(child));
+  }
+
+  // 3) Otherwise `x` is a primitive (string, bigint, number, boolean, etc.).
+  //    There’s nothing more to unwrap, so just return it:
+  return x;
 }
 
 /**
@@ -172,12 +224,22 @@ class Multicall {
       if (!r.success) return [false, r.returnData] as [boolean, any];
 
       try {
-        const dec = calls[i].contract.interface.decodeFunctionResult(
+        const decoded = calls[i].contract.interface.decodeFunctionResult(
           calls[i].functionFragment,
           r.returnData
         );
-        const vals = Array.isArray(dec) ? dec : Object.values(dec);
-        return [true, vals.length === 1 ? vals[0] : vals] as [boolean, any];
+
+        // If function has a *single* output, decoded.length === 1
+        const rawOutput =
+          decoded.length === 1
+            ? decoded[0]
+            : // multiple outputs → toArray() gives [v0, v1, ...]
+              decoded.toArray(true);
+
+        // Now fully unwrap rawOutput into a plain JS primitive/object/array:
+        const plain = _fullyUnwrap(rawOutput);
+
+        return [true, plain] as [boolean, any];
       } catch (err: any) {
         return [false, `Data handling error: ${err.message}`] as [boolean, any];
       }
@@ -215,12 +277,22 @@ class Multicall {
       if (!r.success) return [false, r.returnData] as [boolean, any];
 
       try {
-        const dec = calls[i].contract.interface.decodeFunctionResult(
+        const decodedResult = calls[i].contract.interface.decodeFunctionResult(
           calls[i].functionFragment,
           r.returnData
         );
-        const vals = Array.isArray(dec) ? dec : Object.values(dec);
-        return [true, vals.length === 1 ? vals[0] : vals] as [boolean, any];
+
+        // If function has a *single* output, decoded.length === 1
+        const rawOutput =
+          decodedResult.length === 1
+            ? decodedResult[0]
+            : // multiple outputs → toArray() gives [v0, v1, ...]
+              decodedResult.toArray(true);
+
+        // Now fully unwrap rawOutput into a plain JS primitive/object/array:
+        const plain = _fullyUnwrap(rawOutput);
+
+        return [true, plain] as [boolean, any];
       } catch (err: any) {
         return [false, `Data handling error: ${err.message}`] as [boolean, any];
       }
@@ -242,9 +314,16 @@ class Multicall {
    * Aggregates calls allowing individual failures via allowFailure flag.
    * Mirrors: function aggregate3(Call3[] calldata calls)
    * @param calls - Array of Call3 objects.
-   * @returns Array of tuples [success, decodedResult or raw hex].
+   * @returns An array of [success:boolean, data:any].
+   *   - If success===true, data is already plain JS:
+   *     • primitive (bigint, string, etc)
+   *     • tuple → JS array of [v0,v1,…]
+   *     • struct → JS object {field1, field2,…}
+   *     • struct[] → JS array of objects
+   *   - If success===false, data is the raw hex revertData string.
    */
   async aggregate3(calls: Call3[]): Promise<Array<[boolean, any]>> {
+    // Build the multicall payload
     const payload = calls.map(
       ({ contract, functionFragment, args, allowFailure }) => ({
         target: contract.target,
@@ -253,44 +332,31 @@ class Multicall {
       })
     );
 
+    // Execute the RPC
     const [rawResults] = await this.rpcCall<[MulticallResult[]]>("aggregate3", [
       payload,
     ]);
 
+    // Decode + unwrap each return
     return rawResults.map((r, i) => {
       if (!r.success) return [false, r.returnData] as [boolean, any];
+
       try {
-        // decodeFunctionResult gives us a Result proxy
+        // decodeFunctionResult gives us a `Result` proxy
         const decoded = calls[i].contract.interface.decodeFunctionResult(
           calls[i].functionFragment,
           r.returnData
         );
 
         // If function has a *single* output, decoded.length === 1
-        const raw =
+        const rawOutput =
           decoded.length === 1
             ? decoded[0]
             : // multiple outputs → toArray() gives [v0, v1, ...]
               decoded.toArray(true);
 
-        // Now: if raw is a struct proxy → raw.toObject(true)
-        // if raw is an array of struct proxies → raw.map(r => r.toObject(true))
-        let plain: any;
-
-        if (isEthersResult(raw)) {
-          // single struct → plain object
-          plain = raw.toObject(true);
-        } else if (
-          Array.isArray(raw) &&
-          raw.length > 0 &&
-          isEthersResult(raw[0])
-        ) {
-          // array of structs → plain array of objects
-          plain = (raw as EthersResult[]).map((r) => r.toObject(true));
-        } else {
-          // primitives or tuples → already plain
-          plain = raw;
-        }
+        // Now fully unwrap rawOutput into a plain JS primitive/object/array:
+        const plain = _fullyUnwrap(rawOutput);
 
         return [true, plain] as [boolean, any];
       } catch (err: any) {
@@ -328,12 +394,22 @@ class Multicall {
       if (!r.success) return [false, r.returnData] as [boolean, any];
 
       try {
-        const dec = calls[i].contract.interface.decodeFunctionResult(
+        const decoded = calls[i].contract.interface.decodeFunctionResult(
           calls[i].functionFragment,
           r.returnData
         );
-        const vals = Array.isArray(dec) ? dec : Object.values(dec);
-        return [true, vals.length === 1 ? vals[0] : vals] as [boolean, any];
+
+        // If function has a *single* output, decoded.length === 1
+        const rawOutput =
+          decoded.length === 1
+            ? decoded[0]
+            : // multiple outputs → toArray() gives [v0, v1, ...]
+              decoded.toArray(true);
+
+        // Now fully unwrap rawOutput into a plain JS primitive/object/array:
+        const plain = _fullyUnwrap(rawOutput);
+
+        return [true, plain] as [boolean, any];
       } catch (err: any) {
         return [false, `Data handling error: ${err.message}`] as [boolean, any];
       }

@@ -224,12 +224,22 @@ class Multicall {
       if (!r.success) return [false, r.returnData] as [boolean, any];
 
       try {
-        const dec = calls[i].contract.interface.decodeFunctionResult(
+        const decoded = calls[i].contract.interface.decodeFunctionResult(
           calls[i].functionFragment,
           r.returnData
         );
-        const vals = Array.isArray(dec) ? dec : Object.values(dec);
-        return [true, vals.length === 1 ? vals[0] : vals] as [boolean, any];
+
+        // If function has a *single* output, decoded.length === 1
+        const rawOutput =
+          decoded.length === 1
+            ? decoded[0]
+            : // multiple outputs → toArray() gives [v0, v1, ...]
+              decoded.toArray(true);
+
+        // Now fully unwrap rawOutput into a plain JS primitive/object/array:
+        const plain = _fullyUnwrap(rawOutput);
+
+        return [true, plain] as [boolean, any];
       } catch (err: any) {
         return [false, `Data handling error: ${err.message}`] as [boolean, any];
       }
@@ -267,12 +277,22 @@ class Multicall {
       if (!r.success) return [false, r.returnData] as [boolean, any];
 
       try {
-        const dec = calls[i].contract.interface.decodeFunctionResult(
+        const decodedResult = calls[i].contract.interface.decodeFunctionResult(
           calls[i].functionFragment,
           r.returnData
         );
-        const vals = Array.isArray(dec) ? dec : Object.values(dec);
-        return [true, vals.length === 1 ? vals[0] : vals] as [boolean, any];
+
+        // If function has a *single* output, decoded.length === 1
+        const rawOutput =
+          decodedResult.length === 1
+            ? decodedResult[0]
+            : // multiple outputs → toArray() gives [v0, v1, ...]
+              decodedResult.toArray(true);
+
+        // Now fully unwrap rawOutput into a plain JS primitive/object/array:
+        const plain = _fullyUnwrap(rawOutput);
+
+        return [true, plain] as [boolean, any];
       } catch (err: any) {
         return [false, `Data handling error: ${err.message}`] as [boolean, any];
       }
@@ -335,15 +355,8 @@ class Multicall {
             : // multiple outputs → toArray() gives [v0, v1, ...]
               decoded.toArray(true);
 
-        // Now we need to “unwrap” rawOutput:
-        // • If rawOutput is a named‐struct Result → use .toObject(true)
-        // • If rawOutput is an array of struct Results → map each .toObject(true)
-        // • Otherwise, leave it alone (primitive/tuple)
-
         // Now fully unwrap rawOutput into a plain JS primitive/object/array:
         const plain = _fullyUnwrap(rawOutput);
-
-        // const plain = unwrapResultProxy(rawOutput);
 
         return [true, plain] as [boolean, any];
       } catch (err: any) {
@@ -381,12 +394,22 @@ class Multicall {
       if (!r.success) return [false, r.returnData] as [boolean, any];
 
       try {
-        const dec = calls[i].contract.interface.decodeFunctionResult(
+        const decoded = calls[i].contract.interface.decodeFunctionResult(
           calls[i].functionFragment,
           r.returnData
         );
-        const vals = Array.isArray(dec) ? dec : Object.values(dec);
-        return [true, vals.length === 1 ? vals[0] : vals] as [boolean, any];
+
+        // If function has a *single* output, decoded.length === 1
+        const rawOutput =
+          decoded.length === 1
+            ? decoded[0]
+            : // multiple outputs → toArray() gives [v0, v1, ...]
+              decoded.toArray(true);
+
+        // Now fully unwrap rawOutput into a plain JS primitive/object/array:
+        const plain = _fullyUnwrap(rawOutput);
+
+        return [true, plain] as [boolean, any];
       } catch (err: any) {
         return [false, `Data handling error: ${err.message}`] as [boolean, any];
       }

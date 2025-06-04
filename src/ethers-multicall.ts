@@ -81,205 +81,6 @@ function isEthersResult(x: any): x is EthersResult {
 }
 
 /**
- * Detect whether `v` is a `Result` proxy for a named struct.
- * (We check for a few heuristics: it has `.toObject` and `.toArray`,
- *  and it also has at least one named key in its internal `#names` array.)
- */
-function isStructResult(v: any): v is EthersResult {
-  if (!(v instanceof EthersResult)) return false;
-
-  // `Result.getValue(name)` only works if struct fields had names.
-  // We can inspect `Object.keys(v)`—if there are any non-integer keys,
-  // that’s a sign it’s named. Otherwise, it might be a tuple.
-  for (const key of Object.keys(v)) {
-    if (isNaN(Number(key))) {
-      // found a named key (string that isn’t "0","1","2",…)
-      return true;
-    }
-  }
-  return false;
-}
-
-/**
- * If `x` is an ethers.Result representing a named struct, return `x.toObject(true)`.
- * If `x` is an array of named struct Results, return `x.map(r => r.toObject(true))`.
- * Otherwise, just return `x` unchanged.
- */
-export function unwrapResultProxy(x: any): any {
-  // Case A: a single `Result` proxy for a named struct
-  if (isStructResult(x)) {
-    return (x as EthersResult).toObject(true);
-  }
-
-  // Case B: an array—maybe of struct Results or primitives
-  if (Array.isArray(x)) {
-    // Check if the first element looks like a struct Result
-    if (x.length > 0 && isStructResult(x[0])) {
-      // Map each element → plain object
-      return (x as EthersResult[]).map((r) => r.toObject(true));
-    }
-    // Otherwise, plain tuple or primitive array—just return it
-    return x;
-  }
-
-  // Case C: primitive (bigint, string, boolean, etc)
-  return x;
-}
-
-// /**
-//  * Recursively convert ANY ethers.Result (or Proxy of Result) or nested arrays-of-Results
-//  * into a **pure** JavaScript primitive / object / array.
-//  *
-//  * Cases:
-//  *   1) A single named‐struct “Result”   → `r.toObject(true)` → plain JS object.
-//  *   2) A single unnamed‐tuple “Result”  → `r.toArray(true)`  → nested JS array.
-//  *   3) An array of named‐struct Results  → `[ r1, r2, … ].map(r => r.toObject(true))`.
-//  *   4) An array of unnamed‐tuple Results → `[ r1, r2, … ].map(r => r.toArray(true))`.
-//  *   5) A plain JS array containing primitives or mixed nested Results/arrays → map each element.
-//  *   6) Any primitive (string, bigint, boolean, null, undefined, etc) → return as‐is.
-//  */
-// function _fullyUnwrap(x: any): any {
-//   // ────────────────────────────────────────────────────────────────────────────────
-//   // 1) “Named struct” → an ethers.Result (or Proxy) that has at least one _non‐numeric_ key
-//   //    → return `r.toObject(true)` to deeply unwrap every nested Result inside the struct.
-//   // ────────────────────────────────────────────────────────────────────────────────
-//   if (isNamedStructResult(x)) {
-//     return (x as EthersResult).toObject(/* deep= */ true);
-//   }
-
-//   // ────────────────────────────────────────────────────────────────────────────────
-//   // 2) “Unnamed tuple” → an ethers.Result (or Proxy) with only numeric indices.
-//   //    Could be either:
-//   //      • a single tuple (e.g. function foo(): (uint256,address))  OR
-//   //      • a tuple[] (e.g. function bar(): (uint256,address)[]).
-//   //    To tell the difference, we inspect x.toArray(false) and see if each element is
-//   //    itself a struct-result or just a primitive/array.
-//   // ────────────────────────────────────────────────────────────────────────────────
-//   if (x instanceof EthersResult) {
-//     // Convert to a plain JS array, but do not yet deep‐convert its children:
-//     const arr = (x as EthersResult).toArray(/* deep= */ false);
-
-//     // If arr[0] is a named‐struct Result, we treat this as “struct[]”:
-//     if (
-//       arr.length > 0 &&
-//       arr[0] instanceof EthersResult &&
-//       isNamedStructResult(arr[0])
-//     ) {
-//       // array of structs → return array of objects
-//       return (arr as EthersResult[]).map((r) => r.toObject(/* deep= */ true));
-//     }
-
-//     // Otherwise, it’s either:
-//     //   • a single unnamed tuple (e.g. [BigNumber, "0xabc…"]),  OR
-//     //   • an array of unnamed‐tuples (e.g. [ Result([...]), Result([...]), … ]).
-//     // In either case, we want to _fully unwrap_ each element.
-//     return arr.map((child) => _fullyUnwrap(child));
-//   }
-
-//   // ────────────────────────────────────────────────────────────────────────────────
-//   // 3) A plain JS Array that might contain:
-//   //       • primitives, or
-//   //       • nested ethers.Result (Proxy), or
-//   //       • nested arrays of these.
-//   //    We must recurse over every element to strip away any leftover Result proxy.
-//   // ────────────────────────────────────────────────────────────────────────────────
-//   if (Array.isArray(x)) {
-//     return (x as any[]).map((child) => _fullyUnwrap(child));
-//   }
-
-//   // ────────────────────────────────────────────────────────────────────────────────
-//   // 4) A “simple” primitive (string, bigint, number, boolean, null, undefined, etc).
-//   //    Nothing left to unwrap—return as‐is.
-//   // ────────────────────────────────────────────────────────────────────────────────
-//   return x;
-// }
-
-// /**
-//  * _fullyUnwrap (…) takes ANY of:
-//  *   • an ethers.Result (Proxy) for a named struct
-//  *   • an ethers.Result for an unnamed tuple
-//  *   • an ethers.Result for a tuple[] or struct[]
-//  *   • a plain JS Array (which may contain nested Results or arrays)
-//  *   • a primitive (string, bigint, number, boolean, null, undefined)
-//  *
-//  * and recursively returns:
-//  *   • a plain JS object       (if it truly was a named struct)
-//  *   • a JS array of objects   (if it truly was struct[])
-//  *   • a JS array of arrays    (if it truly was tuple[] or nested tuples)
-//  *   • a primitive             (if it was already primitive)
-//  */
-// function _fullyUnwrap(x: any, c?: number[]): any {
-//   const cases: number[] = c || [];
-//   // 1) If x is an ethers.Result (Proxy or not), try to treat it as a NAMED struct:
-//   //    • Calling `toObject(true)` will only succeed if it really has named fields.
-//   //    • If it does, we immediately return that plain‐JS object.
-//   //
-//   if (x instanceof EthersResult) {
-//     try {
-//       console.log("case 1");
-
-//       // If this was a “named struct” (or array of named structs), toObject(true) will work:
-//       const res = x.toObject(/* deep = */ true);
-//       cases.push(1);
-//       console.log({ cases });
-//       return res;
-//     } catch (_err) {
-//       // Not a named‐struct.  Must be an unnamed tuple or tuple[].
-//       // Fall through to the “toArray(…)” logic below.
-//       cases.push(99);
-
-//       console.log({ cases });
-
-//       console.log("not a named struct");
-//     }
-
-//     //
-//     // 2) Now it must be an UNNAMED tuple or an array of tuples (tuple[]).
-//     //    We use `toArray(false)` to get a JS array of child Results/primitives:
-//     //
-//     const arr = (x as EthersResult).toArray(/* deep = */ false);
-
-//     console.log("case 2");
-
-//     cases.push(2);
-//     console.log({ cases });
-
-//     // Now each element of arr could be:
-//     //   • a struct‐Result (in the case we actually had struct[]), or
-//     //   • a primitive, or
-//     //   • a nested tuple Result, etc.
-//     // So we recurse on each:
-//     return arr.map((child) => _fullyUnwrap(child, cases));
-//   }
-
-//   //
-//   // 3) If x is a plain JS array (Array.isArray(x)===true), it might contain:
-//   //      • nested ethers.Result (Proxy), or
-//   //      • nested arrays thereof, or
-//   //      • primitives.
-//   //    We simply recurse into every element:
-//   //
-//   if (Array.isArray(x)) {
-//     console.log("case 3");
-
-//     cases.push(3);
-//     console.log({ cases });
-
-//     return x.map((child) => _fullyUnwrap(child, cases));
-//   }
-
-//   //
-//   // 4) Otherwise x is already a “primitive” (string, bigint, number, boolean, null, undefined, etc.).
-//   //    There’s nothing to unwrap further:
-//   //
-//   console.log("case 4");
-//   cases.push(4);
-//   console.log({ cases });
-
-//   return x;
-// }
-
-/**
  * Recursively “unwrap” anything returned by ethers.decodeFunctionResult (which is either
  *   • an `EthersResult` proxy (for named structs, or tuple/tuple[]), or
  *   • a plain JS array of primitive values, or
@@ -295,125 +96,34 @@ export function unwrapResultProxy(x: any): any {
  *       that is *not* a named struct (e.g. it’s a `tuple[]`), ethers will throw, so we catch
  *       that and fall back to `.toArray(false)`, which returns a plain Array of child Results.
  */
-export function _fullyUnwrap(x: any, c?: number[]): any {
-  // If the caller didn’t supply a `cases` array, create a fresh one:
-  const cases: number[] = c || [];
-
+export function _fullyUnwrap(x: any): any {
   // 1) Check: is `x` an ethers.Result (possibly a Proxy)?
   if (isEthersResult(x)) {
     try {
       // --- CASE 1: named struct (or named‐struct[]) ---
       // If `x` really is a named struct (or array of named structs),
       // .toObject(true) will succeed:
-      const res = x.toObject(/* deep= */ true);
-      cases.push(1);
-      console.log({ cases });
-      return res;
+      return x.toObject(/* deep= */ true);
     } catch (_err) {
       // --- CASE 99: unnamed tuple or tuple[] ---
       // It wasn’t a named struct, so treat it as an unnamed tuple or tuple[]:
       const arr = x.toArray(/* deep= */ false);
-      cases.push(99);
-      console.log({ cases });
 
       // Recurse into each child, but pass along the same `cases` array:
-      return arr.map((child) => _fullyUnwrap(child, cases));
+      return arr.map((child) => _fullyUnwrap(child));
     }
   }
 
   // 2) If `x` is a plain JS array (Array.isArray(x) === true), we want to
   //    recurse *into* each element. **Do not return `x` outright.**
   if (Array.isArray(x)) {
-    cases.push(2);
-    console.log({ cases });
     // Recurse on every element, passing down the same `cases` array:
-    return x.map((child) => _fullyUnwrap(child, cases));
+    return x.map((child) => _fullyUnwrap(child));
   }
 
   // 3) Otherwise `x` is a primitive (string, bigint, number, boolean, etc.).
   //    There’s nothing more to unwrap, so just return it:
-  cases.push(3);
-  console.log({ cases });
   return x;
-}
-
-/**
- * Recursively peel off every ethers.Result (proxy) or any array of Results,
- * returning only plain JS primitives / arrays / objects.
- *
- * Cases we handle:
- *  1) A single named‐struct Result → `result.toObject(true)`.
- *  2) A single unnamed‐tuple Result → `result.toArray(true)`.
- *  3) A JS array whose first element is a named‐struct Result → map each → `toObject(true)`.
- *  4) A JS array whose first element is an unnamed‐tuple Result → map each → `toArray(true)`.
- *  5) A JS array of primitives or nested arrays → return as‐is.
- *  6) A primitive (bigint, string, boolean, etc) → return as‐is.
- */
-export function unwrapResultFully(x: any): any {
-  // 1) “Single named‐struct Result?” → convert to { fieldName: value, … }
-  if (isNamedStructResult(x)) {
-    console.log("case 1");
-
-    return (x as EthersResult).toObject(/* deep= */ true);
-  }
-
-  // 2) “Single unnamed‐tuple Result?” → convert to [v0, v1, …], deeply unwrapping children
-  if (x instanceof EthersResult && !isNamedStructResult(x)) {
-    console.log("case 2");
-
-    return (x as EthersResult).toArray(/* deep= */ true);
-  }
-
-  // 3) “JS array whose first element is a named‐struct Result?”
-  //    e.g. the output was `TokenData[]`, so each `x[i]` has named keys “token”, “name”, etc.
-  if (
-    Array.isArray(x) &&
-    x.length > 0 &&
-    x[0] instanceof EthersResult &&
-    isNamedStructResult(x[0])
-  ) {
-    console.log("case 3");
-
-    return (x as EthersResult[]).map((r) => r.toObject(/* deep= */ true));
-  }
-
-  // 4) “JS array whose first element is an unnamed‐tuple Result?”
-  if (
-    Array.isArray(x) &&
-    x.length > 0 &&
-    x[0] instanceof EthersResult &&
-    !isNamedStructResult(x[0])
-  ) {
-    console.log("case 4");
-
-    return (x as EthersResult[]).map((r) => r.toArray(/* deep= */ true));
-  }
-
-  // 5) “Any other plain JS array” might contain nested Results or nested arrays.
-  //    → Recurse into each element, just in case.
-  if (Array.isArray(x)) {
-    return (x as any[]).map((child) => unwrapResultFully(child));
-  }
-
-  console.log("case 6");
-  // 6) A primitive (bigint / number / string / boolean / null / undefined / etc) → return as‐is.
-  return x;
-}
-
-/**
- * Detect “named struct” by checking whether an ethers.Result has ANY non-numeric keys.
- * In a named struct, each field has its own name, so `Object.keys(result)` will contain
- * strings like ["token","name","symbol","decimals","owner"] in addition to ["0","1",…].
- *
- * True if `v` is an ethers.Result (or Proxy<Result>) **and** has at least one
- * non‐numeric key, meaning it represents a **named struct** with named fields.
- */
-function isNamedStructResult(v: any): v is EthersResult {
-  if (!(v instanceof EthersResult)) return false;
-
-  // An ethers.Result with named fields will expose those names as keys.
-  // If any key is not a decimal string, we know it is named.
-  return Object.keys(v).some((k) => isNaN(Number(k)));
 }
 
 /**

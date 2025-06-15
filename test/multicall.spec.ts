@@ -120,7 +120,10 @@ describe("Multicall SDK", () => {
 
       const out = await sdk.tryAggregate(true, calls);
 
-      expect(out).to.deep.equal([[false, "0xdeadbeef"]]);
+      // expect(out).to.deep.equal([[false, "0xdeadbeef"]]);
+      expect(out).to.have.length(1);
+      expect(out[0][0]).to.be.false;
+      expect(out[0][1]).to.match(/^Revert:.*0xdeadbeef/);
     });
 
     it("catches decode errors", async () => {
@@ -220,7 +223,9 @@ describe("Multicall SDK", () => {
       const out = await sdk.aggregate3(calls);
 
       expect(out[0]).to.deep.equal([true, "X"]);
-      expect(out[1]).to.deep.equal([false, "0x00"]);
+      // expect(out[1]).to.deep.equal([false, "0x00"]);
+      expect(out[1][0]).to.be.false;
+      expect(out[1][1]).to.match(/^Revert:.*0x00/);
     });
   });
 

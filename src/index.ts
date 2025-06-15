@@ -13,4 +13,4 @@ export type {
   Call3Value,
   ConstructorArgs as MulticallConstructorArgs,
   MulticallResult as MulticallRawResult,
-} from "./ethers-multicall";
+} from "./types";

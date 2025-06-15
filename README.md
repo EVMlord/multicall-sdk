@@ -1,6 +1,13 @@
-# Multicall SDK
+# @evmlord/multicall-sdk
 
-A TypeScript / JavaScript SDK for interacting with a deployed [Multicall3](./SUPPORTED_NETWORKS.md) (V3) contract via ethers-v6. Batch together on-chain calls into a single `eth_call`, decode results, handle failures, and retrieve block info — all with one simple class.
+![npm](https://img.shields.io/npm/dm/@evmlord/multicall-sdk)
+![npm version](https://img.shields.io/npm/v/@evmlord/multicall-sdk)
+![License](https://img.shields.io/npm/l/@evmlord/multicall-sdk)
+![TypeScript](https://img.shields.io/badge/types-included-blue)
+![Bundle size](https://img.shields.io/bundlephobia/min/@evmlord/multicall-sdk)
+[![GitHub stars](https://img.shields.io/github/stars/evmlord/multicall-sdk?style=social)](https://github.com/evmlord/multicall-sdk)
+
+A powerful TypeScript / JavaScript SDK for interacting with a deployed [Multicall3](./SUPPORTED_NETWORKS.md) (V3) contract via ethers-v6. Batch together on-chain calls into a single `eth_call`, decode results, handle failures, and retrieve block info — all with one simple class.
 
 ## Features
 

@@ -11,7 +11,29 @@
 [![Commitizen Friendly][commitizen-img]][commitizen-url]
 [![Semantic Release][semantic-release-img]][semantic-release-url]
 
-> A powerful TypeScript / JavaScript SDK for interacting with a deployed [Multicall3](https://github.com/mds1/multicall3) contract via ethers-v6. Batch together on-chain calls into a single `eth_call`, decode results, handle failures, and retrieve block info — all with one simple class.
+> **Multicall SDK** for **Ethereum**, **EVM-compatible** chains and **DeFi** apps.  
+> Batch on-chain calls, reduce RPC requests, decode results, retrieve block info & handle failures—all in one lightweight TypeScript/JavaScript library built on **ethers v6**.
+
+---
+
+## 🚀 Why @evmlord/multicall-sdk?
+
+- **Gas & RPC Optimized**  
+  Combine dozens of `eth_call` into one multicall, slashing HTTP/WebSocket overhead and minimizing latency.
+
+- **Fully Typed**  
+  Written in TypeScript with built-in declarations—autocomplete your batch calls, interfaces, and return values.
+
+- **Failure-Tolerant**  
+  Gracefully handle individual call failures (`allowFailure`) without aborting the entire batch.
+
+- **Rich Decoding**  
+  Automatically unpack tuples, structs, arrays and custom errors into plain JS objects & arrays—no manual unpacking.
+
+- **EVM & DeFi Focused**  
+  Supports **Multicall3**, **Multicall2** and on-chain block helpers (`getBlockNumber`, `getEthBalance`, etc.) across **280+** networks.
+
+---
 
 ## Features
 

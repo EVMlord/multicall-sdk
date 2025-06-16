@@ -4,6 +4,10 @@ import {
   TransactionResponse,
   Overrides,
   Contract,
+  JsonRpcProvider,
+  BrowserProvider,
+  AbstractProvider,
+  WebSocketProvider,
 } from "ethers";
 import { addresses } from "./constants";
 import { Multicall3ABI } from "./ABIs";
@@ -14,7 +18,7 @@ import type {
   ConstructorArgs,
   MulticallResult,
 } from "./types";
-import { _fullyUnwrap, decodeRevert } from "./helpers";
+import { _fullyUnwrap, decodeRevert, isEip1193Provider } from "./helpers";
 
 /**
  * Multicall wraps the Multicall3 Solidity contract for batching on-chain calls.
@@ -30,11 +34,25 @@ class Multicall {
   public readonly contract?: Contract;
 
   /**
-   * @param args.provider         Ethers Provider instance
-   * @param args.signer           Optional Signer for sending txs
-   * @param args.chainId          If you omit multicallAddress, must supply chainId
-   * @param args.multicallAddress Explicit Multicall3 address (overrides chainId)
-   * @throws if no multicall contract address is found
+   * Create a new Multicall SDK instance.
+   *
+   * @param args.provider
+   *   - `string` → an HTTP(S) or WS(S) RPC URL:
+   *     - `"https://..."` or `"http://..."` → wrapped in ethers’ `JsonRpcProvider`
+   *     - `"wss://..."` or `"ws://..."`   → wrapped in ethers’ `WebSocketProvider`
+   *   - any EIP-1193 provider object (e.g. `window.ethereum`)
+   *     → wrapped in ethers’ `BrowserProvider`
+   *   - any ethers transport provider
+   *     (`JsonRpcProvider`, `WebSocketProvider`, `IpcSocketProvider`, etc.)
+   *     → used as-is
+   *   - any object with a `.call(...)` method → used as a low-level ethers Provider
+   * @param args.chainId
+   *   Optional chainId to auto-lookup the on-chain Multicall3 address.
+   * @param args.multicallAddress
+   *   An explicit Multicall3 address; overrides chainId lookup.
+   * @param args.signer
+   *   If you plan to send state-changing multicall transactions you must provide an ethers `Signer`.
+   * @throws If neither chainId nor multicallAddress yields a contract address.
    */
   constructor({
     provider,
@@ -42,6 +60,29 @@ class Multicall {
     multicallAddress,
     signer,
   }: ConstructorArgs) {
+    // Normalize provider → ethers.Provider
+    if (typeof provider === "string") {
+      // WebSocket endpoint?
+      if (provider.startsWith("ws")) {
+        this.provider = new WebSocketProvider(provider);
+      } else {
+        // anything else → JSON-RPC (http/https).  let JsonRpcProvider validate it:
+        this.provider = new JsonRpcProvider(provider);
+      }
+    } else if (provider instanceof AbstractProvider) {
+      // any custom or built-in ethers transports
+      this.provider = provider;
+    } else if (isEip1193Provider(provider)) {
+      // EIP-1193 style
+      this.provider = new BrowserProvider(provider);
+    } else if (typeof (provider as any).call === "function") {
+      // duck-type minimal ethers.Provider (has `call` API)
+      this.provider = provider as Provider;
+    } else {
+      throw new Error("Unsupported provider type");
+    }
+
+    // Pick Multicall3 address
     const address =
       multicallAddress ?? (chainId ? addresses.Multicall[chainId] : undefined);
 
@@ -53,8 +94,7 @@ class Multicall {
 
     this.target = address;
 
-    this.provider = provider;
-
+    // Load ABI
     this.iface = new Interface(Multicall3ABI);
 
     // for stateful calls:

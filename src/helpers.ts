@@ -1,4 +1,9 @@
-import { AbiCoder, Interface, Result as EthersResult } from "ethers";
+import {
+  AbiCoder,
+  Interface,
+  Result as EthersResult,
+  Eip1193Provider,
+} from "ethers";
 
 /**
  * Type-guard for ethers.Result
@@ -12,6 +17,15 @@ function isEthersResult(x: any): x is EthersResult {
     typeof x.toObject === "function" &&
     // Must have a toArray method (used for unnamed tuples/arrays)
     typeof x.toArray === "function"
+  );
+}
+
+export function isEip1193Provider(x: any): x is Eip1193Provider {
+  return (
+    x != null &&
+    // Must have a request method
+    "request" in x &&
+    typeof x.request === "function"
   );
 }
 

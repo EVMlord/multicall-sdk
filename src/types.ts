@@ -1,11 +1,27 @@
-import { Contract, Provider, Signer } from "ethers";
+import { AbstractProvider, Contract, Eip1193Provider, Signer } from "ethers";
+
 import { ChainId } from "./constants";
+
+export type ProviderLike =
+  /** HTTP/WS/etc. RPC URL */
+  | string
+  /** EIP-1193 (window.ethereum, etc)
+   * any { request(method, params) } style */
+  | Eip1193Provider
+  /** Any ethers provider (incl. JsonRpcApiProvider, InfuraProvider, AlchemyProvider, WebSocketProvider, IpcSocketProvider, etc) */
+  | AbstractProvider;
 
 export interface ConstructorArgs {
   /**
-   * An Ethers.js provider instance.
+   *  Either:
+   *
+   *   • A JSON-RPC URL string,
+   *
+   *   • An Ethers.js Provider instance, or
+   *
+   *   • A Web3/EIP-1193 provider (window.ethereum, etc).
    */
-  provider: Provider;
+  provider: ProviderLike;
   /**
    * Chain ID (enum) for looking up the Multicall contract address.
    * Should correspond to a key in addresses.Multicall.

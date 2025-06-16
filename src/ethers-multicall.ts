@@ -18,7 +18,9 @@ import { _fullyUnwrap, decodeRevert } from "./helpers";
 
 /**
  * Multicall wraps the Multicall3 Solidity contract for batching on-chain calls.
+ *
  * Read-only methods use a low-level `rpcCall` to save the overhead of a full tx.
+ *
  * State-changing methods go through an ethers `Contract` and require a signer.
  */
 class Multicall {
@@ -68,13 +70,12 @@ class Multicall {
     params: any[],
     value?: bigint
   ): Promise<T> {
-    // 1) ABI‐encode the call
+    // ABI‐encode the call
     const data = this.iface.encodeFunctionData(method, params);
-    // 2) Simulate via eth_call
+    // Simulate via eth_call
     const raw = await this.provider.call({ to: this.target, data, value });
-    // 3) Decode into Ethers’s Result class, then cast to T
-    const decoded = this.iface.decodeFunctionResult(method, raw);
-    return decoded as unknown as T;
+    // Decode into Ethers’s Result class, then cast to T
+    return this.iface.decodeFunctionResult(method, raw) as unknown as T;
   }
 
   /**

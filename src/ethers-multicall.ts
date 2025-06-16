@@ -1,148 +1,88 @@
-import { Provider, Contract, Interface, Result as EthersResult } from "ethers";
-import { addresses, ChainId } from "./constants";
+import {
+  Provider,
+  Interface,
+  TransactionResponse,
+  Overrides,
+  Contract,
+  JsonRpcProvider,
+  BrowserProvider,
+  AbstractProvider,
+  WebSocketProvider,
+} from "ethers";
+import { addresses } from "./constants";
 import { Multicall3ABI } from "./ABIs";
-
-export interface ConstructorArgs {
-  /**
-   * An Ethers.js provider instance.
-   */
-  provider: Provider;
-  /**
-   * Chain ID (enum) for looking up the Multicall contract address.
-   * Should correspond to a key in addresses.Multicall.
-   */
-  chainId?: ChainId;
-  /**
-   * Optional override for the Multicall contract address.
-   */
-  multicallAddress?: string;
-}
-
-/**
- * Defines a standard call to be aggregated by Multicall.
- */
-export type Call = {
-  /**
-   * The ethers.Contract instance to call.
-   */
-  contract: Contract;
-  /**
-   * The fragment name (function name) on the target contract.
-   */
-  functionFragment: string;
-  /**
-   * Arguments for the function call.
-   */
-  args: any[];
-};
-
-/**
- * Extends Call to allow failure without reverting.
- */
-export type Call3 = Call & {
-  /**
-   * Whether individual call failures are allowed.
-   */
-  allowFailure: boolean;
-};
-
-/**
- * Extends Call3 to include sending ETH value with each call.
- */
-export type Call3Value = Call3 & {
-  /**
-   * Amount of ETH (in wei) to send with the call.
-   */
-  value: bigint;
-};
-
-/**
- * Mirrors the Result struct from solidity:
- * struct Result { bool success; bytes returnData; }
- */
-export interface MulticallResult {
-  success: boolean;
-  returnData: string;
-}
-
-/**
- * Type-guard for ethers.Result
- * A small “duck-typing” check for anything that looks like an ethers Result.
- * In v6, a `Result` satisfies both of these at runtime:
- */
-function isEthersResult(x: any): x is EthersResult {
-  return (
-    x != null &&
-    // Must have a toObject method (used for named structs)
-    typeof x.toObject === "function" &&
-    // Must have a toArray method (used for unnamed tuples/arrays)
-    typeof x.toArray === "function"
-  );
-}
-
-/**
- * Recursively “unwrap” anything returned by ethers.decodeFunctionResult (which is either
- *   • an `EthersResult` proxy (for named structs, or tuple/tuple[]), or
- *   • a plain JS array of primitive values, or
- *   • a primitive (string, bigint, number, boolean, etc.)
- *
- * We want to end up with either:
- *   • a plain { ... } object (for a named struct), OR
- *   • a plain Array of primitives/objects, OR
- *   • a plain primitive.
- *
- * NOTE: ethers.Result wants you to call `.toObject(true)` in order to convert a *named* struct
- *       into a plain object with its named fields.  If you call `.toObject(true)` on something
- *       that is *not* a named struct (e.g. it’s a `tuple[]`), ethers will throw, so we catch
- *       that and fall back to `.toArray(false)`, which returns a plain Array of child Results.
- */
-export function _fullyUnwrap(x: any): any {
-  // 1) Check: is `x` an ethers.Result (possibly a Proxy)?
-  if (isEthersResult(x)) {
-    try {
-      // --- CASE 1: named struct (or named‐struct[]) ---
-      // If `x` really is a named struct (or array of named structs),
-      // .toObject(true) will succeed:
-      return x.toObject(/* deep= */ true);
-    } catch (_err) {
-      // --- CASE 99: unnamed tuple or tuple[] ---
-      // It wasn’t a named struct, so treat it as an unnamed tuple or tuple[]:
-      const arr = x.toArray(/* deep= */ false);
-
-      // Recurse into each child, but pass along the same `cases` array:
-      return arr.map((child) => _fullyUnwrap(child));
-    }
-  }
-
-  // 2) If `x` is a plain JS array (Array.isArray(x) === true), we want to
-  //    recurse *into* each element. **Do not return `x` outright.**
-  if (Array.isArray(x)) {
-    // Recurse on every element, passing down the same `cases` array:
-    return x.map((child) => _fullyUnwrap(child));
-  }
-
-  // 3) Otherwise `x` is a primitive (string, bigint, number, boolean, etc.).
-  //    There’s nothing more to unwrap, so just return it:
-  return x;
-}
+import type {
+  Call,
+  Call3,
+  Call3Value,
+  ConstructorArgs,
+  MulticallResult,
+} from "./types";
+import { _fullyUnwrap, decodeRevert, isEip1193Provider } from "./helpers";
 
 /**
  * Multicall wraps the Multicall3 Solidity contract for batching on-chain calls.
+ *
+ * Read-only methods use a low-level `rpcCall` to save the overhead of a full tx.
+ *
+ * State-changing methods go through an ethers `Contract` and require a signer.
  */
 class Multicall {
   public readonly provider: Provider;
   public readonly target: string;
   public readonly iface: Interface;
+  public readonly contract?: Contract;
 
   /**
-   * @param args.provider    Ethers provider instance
-   * @param args.chainId     Optional Chain ID enum for address lookup
-   * @param args.multicallAddress Optional explicit contract address
-   * @throws Error if no contract address is found
+   * Create a new Multicall SDK instance.
+   *
+   * @param args.provider
+   *   - `string` → an HTTP(S) or WS(S) RPC URL:
+   *     - `"https://..."` or `"http://..."` → wrapped in ethers’ `JsonRpcProvider`
+   *     - `"wss://..."` or `"ws://..."`   → wrapped in ethers’ `WebSocketProvider`
+   *   - any EIP-1193 provider object (e.g. `window.ethereum`)
+   *     → wrapped in ethers’ `BrowserProvider`
+   *   - any ethers transport provider
+   *     (`JsonRpcProvider`, `WebSocketProvider`, `IpcSocketProvider`, etc.)
+   *     → used as-is
+   *   - any object with a `.call(...)` method → used as a low-level ethers Provider
+   * @param args.chainId
+   *   Optional chainId to auto-lookup the on-chain Multicall3 address.
+   * @param args.multicallAddress
+   *   An explicit Multicall3 address; overrides chainId lookup.
+   * @param args.signer
+   *   If you plan to send state-changing multicall transactions you must provide an ethers `Signer`.
+   * @throws If neither chainId nor multicallAddress yields a contract address.
    */
-  constructor({ provider, chainId, multicallAddress }: ConstructorArgs) {
-    this.provider = provider;
+  constructor({
+    provider,
+    chainId,
+    multicallAddress,
+    signer,
+  }: ConstructorArgs) {
+    // Normalize provider → ethers.Provider
+    if (typeof provider === "string") {
+      // WebSocket endpoint?
+      if (provider.startsWith("ws")) {
+        this.provider = new WebSocketProvider(provider);
+      } else {
+        // anything else → JSON-RPC (http/https).  let JsonRpcProvider validate it:
+        this.provider = new JsonRpcProvider(provider);
+      }
+    } else if (provider instanceof AbstractProvider) {
+      // any custom or built-in ethers transports
+      this.provider = provider;
+    } else if (isEip1193Provider(provider)) {
+      // EIP-1193 style
+      this.provider = new BrowserProvider(provider);
+    } else if (typeof (provider as any).call === "function") {
+      // duck-type minimal ethers.Provider (has `call` API)
+      this.provider = provider as Provider;
+    } else {
+      throw new Error("Unsupported provider type");
+    }
 
+    // Pick Multicall3 address
     const address =
       multicallAddress ?? (chainId ? addresses.Multicall[chainId] : undefined);
 
@@ -154,7 +94,11 @@ class Multicall {
 
     this.target = address;
 
+    // Load ABI
     this.iface = new Interface(Multicall3ABI);
+
+    // for stateful calls:
+    if (signer) this.contract = new Contract(address, this.iface, signer);
   }
 
   /**
@@ -166,21 +110,33 @@ class Multicall {
     params: any[],
     value?: bigint
   ): Promise<T> {
-    // 1) ABI‐encode the call
+    // ABI‐encode the call
     const data = this.iface.encodeFunctionData(method, params);
-    // 2) Simulate via eth_call
+    // Simulate via eth_call
     const raw = await this.provider.call({ to: this.target, data, value });
-    // 3) Decode into Ethers’s Result class, then cast to T
-    const decoded: EthersResult = this.iface.decodeFunctionResult(method, raw);
-    return decoded as unknown as T;
+    // Decode into Ethers’s Result class, then cast to T
+    return this.iface.decodeFunctionResult(method, raw) as unknown as T;
   }
 
   /**
-   * Executes a batch of calls, reverting on any failure.
-   * Mirrors: function aggregate(Call[] calldata calls)
-   * @param calls - Array of Call objects to batch.
-   * @returns An object containing the block number and array
-   * of raw return data containing the responsees.
+   * Execute a batch of calls in a single RPC request, reverting the entire batch
+   * if any individual call fails.  Mirrors the on-chain signature:
+   *   `function aggregate(Call[] calldata calls) returns (uint256 blockNumber, bytes[] returnData)`
+   *
+   * @param calls
+   *   An array of Call descriptors:
+   *   - `contract`: an ethers Contract (or equivalent) with `.target` & `.interface`
+   *   - `functionFragment`: the ABI name or Fragment of the function to call
+   *   - `args`: the arguments for that function
+   *
+   * @returns
+   *   A Promise resolving to an object:
+   *   - `blockNumber: bigint` — the block in which the calls were executed
+   *   - `returnData: string[]` — an array of raw hex return data, in the same order as `calls`
+   *
+   * @remarks
+   * Since `aggregate` reverts the entire batch if *any* call fails, you must wrap
+   * in a try/catch to handle on-chain reverts and decode each entry in `returnData`.
    */
   async aggregate(
     calls: Call[]
@@ -199,16 +155,37 @@ class Multicall {
   }
 
   /**
-   * Executes a batch of calls, optionally allowing failures.
-   * Mirrors: function tryAggregate(bool requireSuccess, Call[] calldata calls)
-   * @param requireSuccess - If true, reverts on any failed call.
-   * @param calls - Array of Call objects.
-   * @returns Array of tuples [success, decodedResult or raw hex].
+   * Execute a batch of calls in a single RPC request, optionally reverting
+   * the entire batch if any call fails.  Mirrors the on-chain signature:
+   *   `function tryAggregate(bool requireSuccess, Call[] calldata calls)`
+   *
+   * @param requireSuccess
+   *   If `true`, any single call failure will cause the entire batch to revert.
+   *   If `false`, failures are returned per-call in the results array.
+   *
+   * @param calls
+   *   An array of Call descriptors:
+   *   - `contract`: an ethers Contract (or equivalent) with `.target` & `.interface`
+   *   - `functionFragment`: the ABI name/signature of the function to call
+   *   - `args`: the arguments for that function
+   *
+   * @returns
+   *   A Promise resolving to an array of tuples `[success: boolean, data: any]`,
+   *   in the same order as `calls`:
+   *   - If `success === true`, `data` is already plain JS:
+   *       • primitive (`bigint`, `string`, etc)
+   *       • tuple → `Array<…>`
+   *       • struct → `{ field1, field2, … }`
+   *       • struct[] → `Array<{…}>`
+   *   - If `success === false`, `data` is a human-readable revert string:
+   *       “Revert: <reason>” for known errors, or
+   *       “(unrecognized revert: 0x…)" snippet for unknown cases.
    */
   async tryAggregate(
     requireSuccess: boolean,
     calls: Call[]
   ): Promise<Array<[boolean, any]>> {
+    // Build the call payload
     const payload = calls.map(({ contract, functionFragment, args }) => ({
       target: contract.target,
       callData: contract.interface.encodeFunctionData(functionFragment, args),
@@ -221,9 +198,19 @@ class Multicall {
     );
 
     return rawResults.map((r, i) => {
-      if (!r.success) return [false, r.returnData] as [boolean, any];
+      if (!r.success)
+        // Decode revert data into a human-readable message
+        return [
+          false,
+          `Revert: ${decodeRevert(
+            /* err= */ {},
+            /* data= */ r.returnData,
+            calls[i].contract.interface
+          )}`,
+        ] as [boolean, any];
 
       try {
+        // Decode the returned bytes into an ethers.Result proxy
         const decoded = calls[i].contract.interface.decodeFunctionResult(
           calls[i].functionFragment,
           r.returnData
@@ -247,13 +234,35 @@ class Multicall {
   }
 
   /**
-   * Executes a batch and returns block info, optionally allowing failures.
-   * Mirrors: function tryBlockAndAggregate(bool requireSuccess, Call[] calldata calls)
-   * @param requireSuccess - If true, reverts on failed calls.
-   * @param calls - Array of Call objects.
-   * @returns Object with blockNumber, blockHash, and array of [success, result].
+   * Execute a batch of read-only calls at the current block, returning block metadata
+   * and per-call success/data tuples.  Backwards-compatible with Multicall2.
    *
-   * Backwards-compatible with Multicall2
+   * Mirrors the on-chain signature:
+   *   `function tryBlockAndAggregate(bool requireSuccess, Call[] calldata calls)`
+   *
+   * @param requireSuccess
+   *   If `true`, the entire batch will revert if *any* call fails;
+   *   if `false`, failures are returned per-call in the results array.
+   *
+   * @param calls
+   *   An array of Call descriptors:
+   *   - `contract`: an ethers Contract or equivalent with `.target` & `.interface`
+   *   - `functionFragment`: the name/signature of the function to call
+   *   - `args`: the arguments for that function
+   *
+   * @returns
+   *   A Promise resolving to an object:
+   *   - `blockNumber: bigint` — the block in which the calls were executed
+   *   - `blockHash: string` — hash of that block
+   *   - `returnData: Array<[success: boolean, data: any]>` — same order as `calls`
+   *     • If `success === true`, `data` is plain JS:
+   *         – primitive (`bigint`, `string`, etc)
+   *         – tuple → `Array<…>`
+   *         – struct → `{ field1, field2, … }`
+   *         – struct[] → `Array<{…}>`
+   *     • If `success === false`, `data` is a human-readable revert:
+   *         – `"Revert: <reason>"` for standard and custom errors
+   *         – `"(unrecognized revert: 0x…)"` snippet for unknown cases
    */
   async tryBlockAndAggregate(
     requireSuccess: boolean,
@@ -263,6 +272,7 @@ class Multicall {
     blockHash: string;
     returnData: Array<[boolean, any]>;
   }> {
+    // Build the payload
     const payload = calls.map(({ contract, functionFragment, args }) => ({
       target: contract.target,
       callData: contract.interface.encodeFunctionData(functionFragment, args),
@@ -274,9 +284,19 @@ class Multicall {
     >("tryBlockAndAggregate", [requireSuccess, payload]);
 
     const decoded = rawResults.map((r, i) => {
-      if (!r.success) return [false, r.returnData] as [boolean, any];
+      if (!r.success)
+        // Decode revert data into a readable string
+        return [
+          false,
+          `Revert: ${decodeRevert(
+            /* err= */ {},
+            /* data= */ r.returnData,
+            calls[i].contract.interface
+          )}`,
+        ] as [boolean, any];
 
       try {
+        // Decode the bytes into an ethers.Result proxy
         const decodedResult = calls[i].contract.interface.decodeFunctionResult(
           calls[i].functionFragment,
           r.returnData
@@ -302,25 +322,49 @@ class Multicall {
   }
 
   /**
-   * Executes a batch and returns block info, reverting on any failure.
-   * Mirrors: function blockAndAggregate(Call[] calldata calls)
-   * @param calls - Array of Call objects.
+   * Executes a batch of calls in a single RPC, reverting the entire batch on any failure.
+   * Internally this is just `tryBlockAndAggregate(true, calls)`.
+   *
+   * @param calls - Array of Call objects (each with a contract, functionFragment, and args).
+   * @returns A promise resolving to an object:
+   *   - `blockNumber: bigint` – the block where these calls were executed
+   *   - `blockHash: string`  – the hash of that block
+   *   - `returnData: Array<[boolean, any]>` – for each call:
+   *       • success=true  ⇒ `any` is the fully‐decoded, plain-JS result (primitive, array, or object)
+   *       • success=false ⇒ `any` is the raw revert data hex (the batch will actually have reverted)
    */
-  async blockAndAggregate(calls: Call[]) {
+  async blockAndAggregate(calls: Call[]): Promise<{
+    blockNumber: bigint;
+    blockHash: string;
+    returnData: Array<[boolean, any]>;
+  }> {
     return this.tryBlockAndAggregate(true, calls);
   }
 
   /**
-   * Aggregates calls allowing individual failures via allowFailure flag.
-   * Mirrors: function aggregate3(Call3[] calldata calls)
-   * @param calls - Array of Call3 objects.
-   * @returns An array of [success:boolean, data:any].
-   *   - If success===true, data is already plain JS:
-   *     • primitive (bigint, string, etc)
-   *     • tuple → JS array of [v0,v1,…]
-   *     • struct → JS object {field1, field2,…}
-   *     • struct[] → JS array of objects
-   *   - If success===false, data is the raw hex revertData string.
+   * Execute a batch of calls via Multicall3, allowing individual calls to fail.
+   *
+   * Mirrors the on-chain signature:
+   *   `function aggregate3(Call3[] calldata calls)`
+   *
+   * @param calls
+   *   An array of Call3 descriptors:
+   *   - `contract`: an ethers Contract or equivalent with `.target` & `.interface`
+   *   - `functionFragment`: the name/signature of the function to call
+   *   - `args`: the arguments for that function
+   *   - `allowFailure`: whether this call may fail without bubbling up
+   *
+   * @returns
+   *   A Promise resolving to an array of `[success, data]` tuples, in the same order:
+   *   - If `success === true`, `data` is already a plain‐JS value:
+   *       • **primitive** (`bigint`, `string`, `boolean`, etc)
+   *       • **tuple** → `Array<…>`
+   *       • **struct** → `{ field1:…, field2:…, … }`
+   *       • **struct[]** → `Array<{…}>`
+   *   - If `success === false`, `data` is a human-readable revert string, prefixed with `"Revert: "`:
+   *       • Standard `Error(string)` reasons
+   *       • Custom Solidity errors (`MyError(arg1,arg2)`)
+   *       • Fallback snippet `(unrecognized revert: 0x…)`
    */
   async aggregate3(calls: Call3[]): Promise<Array<[boolean, any]>> {
     // Build the multicall payload
@@ -339,10 +383,101 @@ class Multicall {
 
     // Decode + unwrap each return
     return rawResults.map((r, i) => {
-      if (!r.success) return [false, r.returnData] as [boolean, any];
+      if (!r.success)
+        // on failure, try to unpack the revert
+        return [
+          false,
+          `Revert: ${decodeRevert(
+            /* err= */ {},
+            /* data= */ r.returnData,
+            calls[i].contract.interface
+          )}`,
+        ] as [boolean, any];
 
       try {
-        // decodeFunctionResult gives us a `Result` proxy
+        // decodeFunctionResult gives us an ethers `Result` proxy
+        const decoded = calls[i].contract.interface.decodeFunctionResult(
+          calls[i].functionFragment,
+          r.returnData
+        );
+
+        // If function has a *single* output, decoded.length === 1
+        const rawOutput =
+          decoded.length === 1
+            ? decoded[0]
+            : // multiple outputs → deep array → toArray() gives [v0, v1, ...]
+              decoded.toArray(true);
+
+        // Now fully unwrap rawOutput into a plain JS primitive/object/array:
+        const plain = _fullyUnwrap(rawOutput);
+
+        return [true, plain] as [boolean, any];
+      } catch (err: any) {
+        return [false, `Data handling error: ${err.message}`] as [boolean, any];
+      }
+    });
+  }
+
+  /**
+   * Execute a batch of calls (with ETH attached) via Multicall3, allowing individual calls to fail.
+   *
+   * Mirrors the on-chain signature:
+   *   `function aggregate3Value(Call3Value[] calldata calls)`
+   *
+   * @param calls
+   *   An array of Call3Value descriptors:
+   *   - `contract`: an ethers Contract or equivalent with `.target` & `.interface`
+   *   - `functionFragment`: the name/signature of the function to call
+   *   - `args`: the arguments for that function
+   *   - `value`: the amount of native ETH (in wei) to send with that call
+   *   - `allowFailure`: whether this call may fail without bubbling up
+   *
+   * @returns
+   *   A Promise resolving to an array of `[success, data]` tuples, in the same order:
+   *   - If `success === true`, `data` is already a plain‐JS value:
+   *       • **primitive** (`bigint`, `string`, `boolean`, etc)
+   *       • **tuple** → `Array<…>`
+   *       • **struct** → `{ field1:…, field2:…, … }`
+   *       • **struct[]** → `Array<{…}>`
+   *   - If `success === false`, `data` is a human-readable revert string, prefixed with `"Revert: "`:
+   *       • Standard `Error(string)` reasons
+   *       • Custom Solidity errors (`MyError(arg1,arg2)`)
+   *       • Fallback snippet `(unrecognized revert: 0x…)`
+   */
+  async aggregate3Value(calls: Call3Value[]): Promise<Array<[boolean, any]>> {
+    // Build the multicall3Value payload
+    const payload = calls.map(
+      ({ contract, functionFragment, args, allowFailure, value }) => ({
+        target: contract.target,
+        allowFailure,
+        value,
+        callData: contract.interface.encodeFunctionData(functionFragment, args),
+      })
+    );
+
+    // Sum up all ETH values to send with the aggregate call
+    const totalValue = calls.reduce((sum, c) => sum + c.value, 0n);
+
+    // Execute the RPC, passing along the bundled value
+    const [rawResults] = await this.rpcCall<[MulticallResult[]]>(
+      "aggregate3Value",
+      [payload],
+      totalValue
+    );
+
+    return rawResults.map((r, i) => {
+      if (!r.success)
+        // on failure, try to unpack the revert
+        return [
+          false,
+          `Revert: ${decodeRevert(
+            /* err= */ {},
+            /* data= */ r.returnData,
+            calls[i].contract.interface
+          )}`,
+        ] as [boolean, any];
+
+      try {
         const decoded = calls[i].contract.interface.decodeFunctionResult(
           calls[i].functionFragment,
           r.returnData
@@ -366,12 +501,55 @@ class Multicall {
   }
 
   /**
-   * Aggregates calls with ETH value, allowing failures per-call.
-   * Mirrors: function aggregate3Value(Call3Value[] calldata calls)
-   * @param calls - Array of Call3Value objects.
-   * @returns Array of tuples [success, decodedResult or raw hex].
+   * Batch-execute multiple non-view calls (with optional per-call ETH),
+   * in **one payable on-chain tx** via Multicall3.aggregate3Value.
+   *
+   * @param calls     Each Call3Value describes
+   *                  { contract, functionFragment, args, value, allowFailure }
+   *                  – the `value` will be added into total `msg.value`.
+   * @param overrides Optional Ethers overrides (gasLimit, gasPrice, etc).
+   * @returns A Promise resolving to the TransactionResponse, which you can `.wait()` on
+   * @throws if no Signer was provided in the constructor.
    */
-  async aggregate3Value(calls: Call3Value[]): Promise<Array<[boolean, any]>> {
+  async sendAggregate3Value(
+    calls: Call3Value[],
+    overrides: Overrides = {}
+  ): Promise<TransactionResponse> {
+    if (!this.contract) {
+      throw new Error("Must initialize with signer to send transactions");
+    }
+
+    // // [payloadArray, sumOfAllValues] in one go
+    // const [payload, totalValue] = calls.reduce<
+    //   [
+    //     {
+    //       target: string;
+    //       allowFailure: boolean;
+    //       callData: string;
+    //     }[],
+    //     bigint
+    //   ]
+    // >(
+    //   (
+    //     [acc, sum],
+    //     { contract, functionFragment, args, allowFailure, value }
+    //   ) => [
+    //     acc.concat({
+    //       target: contract.target.toString(),
+    //       allowFailure,
+    //       // we don't include per‐call value here—only msg.value matters on-chain:
+    //       callData: contract.interface.encodeFunctionData(
+    //         functionFragment,
+    //         args
+    //       ),
+    //     }),
+    //     sum + value,
+    //   ],
+    //   [[], 0n]
+    // );
+    // But readability over terseness
+
+    // Build the multicall3Value payload
     const payload = calls.map(
       ({ contract, functionFragment, args, allowFailure, value }) => ({
         target: contract.target,
@@ -381,38 +559,13 @@ class Multicall {
       })
     );
 
-    // Sum all ETH values
+    // Sum up all ETH values to send with the aggregate call
     const totalValue = calls.reduce((sum, c) => sum + c.value, 0n);
 
-    const [rawResults] = await this.rpcCall<[MulticallResult[]]>(
-      "aggregate3Value",
-      [payload],
-      totalValue
-    );
-
-    return rawResults.map((r, i) => {
-      if (!r.success) return [false, r.returnData] as [boolean, any];
-
-      try {
-        const decoded = calls[i].contract.interface.decodeFunctionResult(
-          calls[i].functionFragment,
-          r.returnData
-        );
-
-        // If function has a *single* output, decoded.length === 1
-        const rawOutput =
-          decoded.length === 1
-            ? decoded[0]
-            : // multiple outputs → toArray() gives [v0, v1, ...]
-              decoded.toArray(true);
-
-        // Now fully unwrap rawOutput into a plain JS primitive/object/array:
-        const plain = _fullyUnwrap(rawOutput);
-
-        return [true, plain] as [boolean, any];
-      } catch (err: any) {
-        return [false, `Data handling error: ${err.message}`] as [boolean, any];
-      }
+    // `aggregate3Value` takes (Call3Value[] calldata calls)
+    return this.contract.aggregate3Value(payload, {
+      ...overrides,
+      value: overrides.value ?? totalValue,
     });
   }
 

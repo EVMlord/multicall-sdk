@@ -1,6 +1,39 @@
-# Multicall SDK
+# @evmlord/multicall-sdk
 
-A TypeScript / JavaScript SDK for interacting with a deployed [Multicall3](./SUPPORTED_NETWORKS.md) (V3) contract via ethers-v6. Batch together on-chain calls into a single `eth_call`, decode results, handle failures, and retrieve block info — all with one simple class.
+![npm version](https://img.shields.io/npm/v/@evmlord/multicall-sdk)
+![License](https://img.shields.io/npm/l/@evmlord/multicall-sdk)
+[![All downloads][downloads-img]][downloads-url]
+![Weekly downloads](https://img.shields.io/npm/dw/@evmlord/multicall-sdk)
+![TypeScript](https://img.shields.io/badge/types-included-blue)
+![Bundle size](https://img.shields.io/bundlephobia/min/@evmlord/multicall-sdk)
+[![GitHub stars](https://img.shields.io/github/stars/evmlord/multicall-sdk?style=social)](https://github.com/evmlord/multicall-sdk)
+[![Issues][issues-img]][issues-url]
+[![Commitizen Friendly][commitizen-img]][commitizen-url]
+[![Semantic Release][semantic-release-img]][semantic-release-url]
+
+> **Multicall SDK** for **Ethereum**, **EVM-compatible** chains and **DeFi** apps.  
+> Batch on-chain calls, reduce RPC requests, decode results, retrieve block info & handle failures—all in one lightweight TypeScript/JavaScript library built on **ethers v6**.
+
+---
+
+## 🚀 Why @evmlord/multicall-sdk?
+
+- **Gas & RPC Optimized**  
+  Combine dozens of `eth_call` into one multicall, slashing HTTP/WebSocket overhead and minimizing latency.
+
+- **Fully Typed**  
+  Written in TypeScript with built-in declarations—autocomplete your batch calls, interfaces, and return values.
+
+- **Failure-Tolerant**  
+  Gracefully handle individual call failures (`allowFailure`) without aborting the entire batch.
+
+- **Rich Decoding**  
+  Automatically unpack tuples, structs, arrays and custom errors into plain JS objects & arrays—no manual unpacking.
+
+- **EVM & DeFi Focused**  
+  Supports **Multicall3**, **Multicall2** and on-chain block helpers (`getBlockNumber`, `getEthBalance`, etc.) across **280+** networks.
+
+---
 
 ## Features
 
@@ -25,7 +58,9 @@ npm install @evmlord/multicall-sdk
 
 ## Usage
 
-[Default Supported Networks](./SUPPORTED_NETWORKS.md)
+**<!-- CHAINS-COUNT -->285<!-- CHAINS-COUNT -->** EVM-compatible networks are supported by default, and custom networks can be supported by providing a deployed Multicall contract address.
+
+👉 See the complete list in [`SUPPORTED_NETWORKS.md`](./SUPPORTED_NETWORKS.md).
 
 ### Constructor
 
@@ -287,3 +322,16 @@ yarn test
 ## License
 
 MIT License - Copyright (©) 2025 EVMlord
+
+[build-img]: https://github.com/evmlord/multicall-sdk/actions/workflows/release.yml/badge.svg
+[build-url]: https://github.com/evmlord/multicall-sdk/actions/workflows/release.yml
+[downloads-img]: https://img.shields.io/npm/dt/@evmlord/multicall-sdk
+[downloads-url]: https://www.npmtrends.com/@evmlord/multicall-sdk
+[issues-img]: https://img.shields.io/github/issues/evmlord/multicall-sdk
+[issues-url]: https://github.com/evmlord/multicall-sdk/issues
+[semantic-release-img]: https://img.shields.io/badge/%20%20%F0%9F%93%A6%F0%9F%9A%80-semantic--release-e10079.svg
+[semantic-release-url]: https://github.com/semantic-release/semantic-release
+[commitizen-img]: https://img.shields.io/badge/commitizen-friendly-brightgreen.svg
+[commitizen-url]: http://commitizen.github.io/cz-cli/
+
+<!-- [![Build Status][build-img]][build-url] -->

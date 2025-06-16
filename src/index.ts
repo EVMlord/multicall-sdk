@@ -1,5 +1,5 @@
 // constants
-export * from "./constants";
+export { ChainId, getMulticallAddress } from "./constants";
 
 // ABI
 export { Multicall3ABI } from "./ABIs";
@@ -13,4 +13,4 @@ export type {
   Call3Value,
   ConstructorArgs as MulticallConstructorArgs,
   MulticallResult as MulticallRawResult,
-} from "./ethers-multicall";
+} from "./types";

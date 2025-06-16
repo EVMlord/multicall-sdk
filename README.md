@@ -36,11 +36,9 @@ npm install @evmlord/multicall-sdk
 
 ## Usage
 
-The below networks are supported by default, and custom networks can be supported by providing a deployed Multicall contract address.
+**<!-- CHAINS-COUNT -->285<!-- CHAINS-COUNT -->** EVM-compatible networks are supported by default, and custom networks can be supported by providing a deployed Multicall contract address.
 
-<!-- CHAINS-TABLE:START -->
-<!-- This section is auto-generated – do not edit -->
-<!-- CHAINS-TABLE:END -->
+👉 See the complete list in [`SUPPORTED_NETWORKS.md`](./SUPPORTED_NETWORKS.md).
 
 ### Constructor
 

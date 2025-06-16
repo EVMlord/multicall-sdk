@@ -4,7 +4,8 @@
   "description": "A powerful multichain lightweight library to process multiple calls via a single eth_call using Ethers JS.",
   "scripts": {
     "alpha": "npm publish --tag alpha",
-    "gen:readme": "ts-node scripts/generate-readme.ts",
+    "gen": "ts-node scripts/gen-multicall.ts",
+    "gen:readme": "ts-node scripts/generate-supported-networks.ts",
     "build": "tsc",
     "typecheck": "tsc --noEmit",
     "prepublishOnly": "yarn test && yarn gen:readme && yarn build",

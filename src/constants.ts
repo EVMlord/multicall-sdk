@@ -52,46 +52,83 @@ export enum ChainId {
   SONIC = 146,
 }
 
-export enum VERSION {
-  V1,
-}
-
 /**
  * Map exactly the values in ChainId to on-chain contract addresses.
  *
  * We use Partial<> here because we may not deploy a given contract on every network.
  */
-export type AddressType = Partial<Record<ChainId, string>>;
+type AddressType = Partial<Record<ChainId, string>>;
+
+/** canonical Multicall3 address */
+const DEFAULT_MULTICALL3_ADDRESS =
+  "0xcA11bde05977b3631167028862bE2a173976CA11" as const;
+
+/** Networks where ONLY the canonical address is deployed     */
+const UNIFIED_CHAINS: readonly ChainId[] = [
+  ChainId.MAINNET,
+  ChainId.BSC,
+  ChainId.BSC_TESTNET,
+  ChainId.ARBITRUM,
+  ChainId.ARBITRUM_TESTNET,
+  ChainId.OPTIMISM,
+  ChainId.BASE,
+  ChainId.LINEA,
+  ChainId.POLYGON_ZKEVM,
+  ChainId.OPBNB,
+  ChainId.SCROLL,
+] as const;
+
+/** Custom one-offs and legacy deployments                  */
+const CUSTOM_MULTICALL: AddressType = {
+  // Mainnets
+  [ChainId.MAINNET]: "0x2c7002B316507F228BC6E10855856Ba93114EbB8",
+  [ChainId.BSC]: "0x134f94adA24A7ed01AF204D72e7FcFf97E5538da",
+  [ChainId.ARBITRUM]: "0x2697B961c5504190502533b69177f3912d3D450B",
+  [ChainId.MATIC]: "0x5bE2bE1DFC48935FDA90C6A84D67089896F49aed",
+  [ChainId.OPTIMISM]: "0x9E4096d2CE10C37288dEEa27f779774F9C4Cb15B",
+  [ChainId.BASE]: "0xc80CA59256a07f72e2CF8d16Ddc11629B34e0820",
+  [ChainId.AVALANCHE]: "0x82049c5eB881856909d084BE3edB5AFEaD9d2ebe",
+  [ChainId.ZKSYNC_ERA]: "0x3A3CD02b704bB1A54dd37170b75708cAAFeD5Af0",
+  [ChainId.LINEA]: "0xB77E3Cb8b2441C53A306bE3220633BBd4d168710",
+  [ChainId.SCROLL]: "0x51a60977d4E88843086B85118e0f8673b985EBAF",
+  [ChainId.MANTLE]: "0x00D5fB018BC973f4D7b4B46E06CF834D6105ba0e",
+  [ChainId.APECHAIN]: "0x354Fe27D768744D4AA74E39aec4B93135Fd6278C",
+  [ChainId.METIS]: "0x1f88Aec1f343569e3a041dA875c41d9839DbEcf9",
+  [ChainId.ZORA]: "0xA7f3d2dEa7a53E7A9FEbBdE5Cf7C69d39D065030",
+  [ChainId.KAVA]: "0x9ecb8f928c49c24922290EB433F285df0766f623",
+  [ChainId.CRONOS]: "0x226A09E64e41CB24d0B0dFBeB6DcBb930E6E1eC7",
+  [ChainId.OPBNB]: "0x52AE8dfcaa1b918D849f470AA6F208BF621eEf8c",
+  [ChainId.CORE]: "0x58bf0BC53Df83D493da0289fC4d7044885516E4B",
+  [ChainId.AIOZ]: "0x1BD8CD51e9E0fA901e3E568534382148665a7145",
+  [ChainId.GRAVITY]: "0x00D5fB018BC973f4D7b4B46E06CF834D6105ba0e",
+  [ChainId.LISK]: "0x226A09E64e41CB24d0B0dFBeB6DcBb930E6E1eC7",
+  [ChainId.SONIC]: "0x1BD8CD51e9E0fA901e3E568534382148665a7145",
+
+  // Testnets
+  [ChainId.BSC_TESTNET]: "0x06084aF049CA61B1FC7E65a95dB09695E4014d5a",
+  [ChainId.MONAD_TESTNET]: "0x1BD8CD51e9E0fA901e3E568534382148665a7145",
+  [ChainId.XRPLEVM_TESTNET]: "0x3f012a7C54dF759B145740454f61A2F2457A3028",
+};
+
+/** Auto-generate the “unified” part of the map */
+const FALLBACK_MULTICALL = UNIFIED_CHAINS.reduce<AddressType>((m, id) => {
+  m[id] = DEFAULT_MULTICALL3_ADDRESS;
+  return m;
+}, {});
+
+/** The final object that callers will import */
+const Multicall: AddressType = {
+  ...FALLBACK_MULTICALL, // defaults
+  ...CUSTOM_MULTICALL, // overrides win
+};
+
+export const getMulticallAddress = (chain: ChainId): String | undefined =>
+  Multicall[chain];
 
 export const addresses = {
-  Multicall: <AddressType>{
-    // Mainnets
-    [ChainId.MAINNET]: "0x2c7002B316507F228BC6E10855856Ba93114EbB8",
-    [ChainId.BSC]: "0x134f94adA24A7ed01AF204D72e7FcFf97E5538da",
-    [ChainId.ARBITRUM]: "0x2697B961c5504190502533b69177f3912d3D450B",
-    [ChainId.MATIC]: "0x5bE2bE1DFC48935FDA90C6A84D67089896F49aed",
-    [ChainId.OPTIMISM]: "0x9E4096d2CE10C37288dEEa27f779774F9C4Cb15B",
-    [ChainId.BASE]: "0xc80CA59256a07f72e2CF8d16Ddc11629B34e0820",
-    [ChainId.AVALANCHE]: "0x82049c5eB881856909d084BE3edB5AFEaD9d2ebe",
-    [ChainId.ZKSYNC_ERA]: "0x3A3CD02b704bB1A54dd37170b75708cAAFeD5Af0",
-    [ChainId.LINEA]: "0xB77E3Cb8b2441C53A306bE3220633BBd4d168710",
-    [ChainId.SCROLL]: "0x51a60977d4E88843086B85118e0f8673b985EBAF",
-    [ChainId.MANTLE]: "0x00D5fB018BC973f4D7b4B46E06CF834D6105ba0e",
-    [ChainId.APECHAIN]: "0x354Fe27D768744D4AA74E39aec4B93135Fd6278C",
-    [ChainId.METIS]: "0x1f88Aec1f343569e3a041dA875c41d9839DbEcf9",
-    [ChainId.ZORA]: "0xA7f3d2dEa7a53E7A9FEbBdE5Cf7C69d39D065030",
-    [ChainId.KAVA]: "0x9ecb8f928c49c24922290EB433F285df0766f623",
-    [ChainId.CRONOS]: "0x226A09E64e41CB24d0B0dFBeB6DcBb930E6E1eC7",
-    [ChainId.OPBNB]: "0x52AE8dfcaa1b918D849f470AA6F208BF621eEf8c",
-    [ChainId.CORE]: "0x58bf0BC53Df83D493da0289fC4d7044885516E4B",
-    [ChainId.AIOZ]: "0x1BD8CD51e9E0fA901e3E568534382148665a7145",
-    [ChainId.GRAVITY]: "0x00D5fB018BC973f4D7b4B46E06CF834D6105ba0e",
-    [ChainId.LISK]: "0x226A09E64e41CB24d0B0dFBeB6DcBb930E6E1eC7",
-    [ChainId.SONIC]: "0x1BD8CD51e9E0fA901e3E568534382148665a7145",
-
-    // Testnets
-    [ChainId.BSC_TESTNET]: "0x06084aF049CA61B1FC7E65a95dB09695E4014d5a",
-    [ChainId.MONAD_TESTNET]: "0x1BD8CD51e9E0fA901e3E568534382148665a7145",
-    [ChainId.XRPLEVM_TESTNET]: "0x3f012a7C54dF759B145740454f61A2F2457A3028",
-  },
+  Multicall, // now includes **all** supported chains
 };
+
+export enum VERSION {
+  V1,
+}

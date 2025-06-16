@@ -1,13 +1,17 @@
 # @evmlord/multicall-sdk
 
-![npm](https://img.shields.io/npm/dm/@evmlord/multicall-sdk)
 ![npm version](https://img.shields.io/npm/v/@evmlord/multicall-sdk)
 ![License](https://img.shields.io/npm/l/@evmlord/multicall-sdk)
+[![All downloads][downloads-img]][downloads-url]
+![Weekly downloads](https://img.shields.io/npm/dw/@evmlord/multicall-sdk)
 ![TypeScript](https://img.shields.io/badge/types-included-blue)
 ![Bundle size](https://img.shields.io/bundlephobia/min/@evmlord/multicall-sdk)
 [![GitHub stars](https://img.shields.io/github/stars/evmlord/multicall-sdk?style=social)](https://github.com/evmlord/multicall-sdk)
+[![Issues][issues-img]][issues-url]
+[![Commitizen Friendly][commitizen-img]][commitizen-url]
+[![Semantic Release][semantic-release-img]][semantic-release-url]
 
-A powerful TypeScript / JavaScript SDK for interacting with a deployed [Multicall3](./SUPPORTED_NETWORKS.md) (V3) contract via ethers-v6. Batch together on-chain calls into a single `eth_call`, decode results, handle failures, and retrieve block info — all with one simple class.
+> A powerful TypeScript / JavaScript SDK for interacting with a deployed [Multicall3](https://github.com/mds1/multicall3) contract via ethers-v6. Batch together on-chain calls into a single `eth_call`, decode results, handle failures, and retrieve block info — all with one simple class.
 
 ## Features
 
@@ -32,7 +36,11 @@ npm install @evmlord/multicall-sdk
 
 ## Usage
 
-[Default Supported Networks](./SUPPORTED_NETWORKS.md)
+The below networks are supported by default, and custom networks can be supported by providing a deployed Multicall contract address.
+
+<!-- CHAINS-TABLE:START -->
+<!-- This section is auto-generated – do not edit -->
+<!-- CHAINS-TABLE:END -->
 
 ### Constructor
 
@@ -294,3 +302,16 @@ yarn test
 ## License
 
 MIT License - Copyright (©) 2025 EVMlord
+
+[build-img]: https://github.com/evmlord/multicall-sdk/actions/workflows/release.yml/badge.svg
+[build-url]: https://github.com/evmlord/multicall-sdk/actions/workflows/release.yml
+[downloads-img]: https://img.shields.io/npm/dt/@evmlord/multicall-sdk
+[downloads-url]: https://www.npmtrends.com/@evmlord/multicall-sdk
+[issues-img]: https://img.shields.io/github/issues/evmlord/multicall-sdk
+[issues-url]: https://github.com/evmlord/multicall-sdk/issues
+[semantic-release-img]: https://img.shields.io/badge/%20%20%F0%9F%93%A6%F0%9F%9A%80-semantic--release-e10079.svg
+[semantic-release-url]: https://github.com/semantic-release/semantic-release
+[commitizen-img]: https://img.shields.io/badge/commitizen-friendly-brightgreen.svg
+[commitizen-url]: http://commitizen.github.io/cz-cli/
+
+<!-- [![Build Status][build-img]][build-url] -->

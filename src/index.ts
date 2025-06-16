@@ -1,5 +1,5 @@
 // constants
-export * from "./constants";
+export { ChainId, getMulticallAddress } from "./constants";
 
 // ABI
 export { Multicall3ABI } from "./ABIs";

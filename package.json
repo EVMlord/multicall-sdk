@@ -1,6 +1,6 @@
 {
   "name": "@evmlord/multicall-sdk",
-  "version": "0.0.5-alpha.3",
+  "version": "0.0.5-alpha.5",
   "description": "A powerful multichain lightweight library to process multiple calls via a single eth_call using Ethers JS.",
   "scripts": {
     "alpha": "npm publish --tag alpha",

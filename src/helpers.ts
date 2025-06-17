@@ -4,6 +4,7 @@ import {
   Result as EthersResult,
   Eip1193Provider,
 } from "ethers";
+import type { Call } from "./types";
 
 /**
  * Type-guard for ethers.Result
@@ -27,6 +28,21 @@ export function isEip1193Provider(x: any): x is Eip1193Provider {
     "request" in x &&
     typeof x.request === "function"
   );
+}
+
+export function validateCall(call: Call): string {
+  try {
+    return call.contract.interface.encodeFunctionData(
+      call.functionFragment,
+      call.args
+    );
+  } catch (e) {
+    throw new Error(
+      `${decodeRevert(e, undefined, call.contract.interface)} "${
+        call.functionFragment
+      }" on ${call.contract.target}\n\n`
+    );
+  }
 }
 
 /**

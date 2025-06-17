@@ -23,17 +23,21 @@ jobs:
         node-version: [18.x, 20.x]
 
     steps:
-      - name: Check out code
+      - name: 📥 Check out code
         uses: actions/checkout@v4
 
-      - name: Use Node.js ${{ matrix.node-version }}
+      - name: 🛠️  Set up Node.js ${{ matrix.node-version }} + Yarn cache
         uses: actions/setup-node@v4
         with:
           node-version: ${{ matrix.node-version }}
-          cache: "npm" # node‑modules cache keyed on lockfile hash
+          cache: "yarn"
+          cache-dependency-path: "yarn.lock"
 
-      - name: Install dependencies (clean)
-        run: npm ci
+      - name: 🚀 Enable Corepack (Yarn 1‒4 support)
+        run: corepack enable
 
-      - name: Run unit tests
-        run: npm run test
+      - name: 📦 Install dependencies (Yarn, lockfile enforced)
+        run: yarn install --frozen-lockfile
+
+      - name: 🧪 Run unit tests
+        run: yarn test

@@ -1,6 +1,6 @@
 {
   "name": "@evmlord/multicall-sdk",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A lightweight library to batch multiple calls via a single eth_call using Multicall3 on 285+ chains.",
   "scripts": {
     "alpha": "npm publish --tag alpha",

@@ -16,10 +16,9 @@ jobs:
   test:
     runs-on: ubuntu-latest
 
-    # Test against two active LTS Node versions
     strategy:
       matrix:
-        node-version: [18.x, 20.x]
+        node-version: [20.x] # Target runtime
 
     steps:
       - name: 📥 Check out code
@@ -39,7 +38,4 @@ jobs:
         run: yarn install --frozen-lockfile
 
       - name: 🧪 Run unit tests
-        # Use ts-node's ESM loader so both Node 18 and 20 can import the ESM‑only
-        # version of chai and any other ESM deps.
-        run: |
-          npx mocha --loader ts-node/esm "test/**/*.spec.ts" --exit
+        run: yarn test

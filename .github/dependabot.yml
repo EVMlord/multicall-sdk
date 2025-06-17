@@ -1,0 +1,55 @@
+# Dependabot configuration
+# Docs: https://docs.github.com/en/code-security/dependabot/working-with-dependabot
+
+version: 2
+
+updates:
+  # ────────────────────────────────────────────────────────────────────────────
+  # 1️⃣ JavaScript / TypeScript dependencies (package.json + yarn.lock)
+  # ────────────────────────────────────────────────────────────────────────────
+  - package-ecosystem: "npm" # Dependabot understands both npm & yarn via lockfile
+    directory: "/" # Monorepos: point to root or individual packages
+
+    # Check once a week (same cadence as the CI cron job)
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:00"
+
+    # Automatically rebase if the base branch moved -> keeps PRs merge‑able
+    rebase-strategy: auto
+
+    # Group all minor + patch bumps into a single PR to avoid PR spam
+    groups:
+      all-minor-patch:
+        patterns: ["*"]
+        update-types: ["minor", "patch"]
+
+    # Give the bot PRs clear labels and a helpful prefix
+    commit-message:
+      prefix: "deps"
+
+    labels:
+      - "deps"
+      - "npm"
+
+    # Limit how many open PRs Dependabot can leave at once
+    open-pull-requests-limit: 10
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # 2️⃣ GitHub Actions versions (action.yaml revisions & Docker tags)
+  # ────────────────────────────────────────────────────────────────────────────
+  - package-ecosystem: "github-actions"
+    directory: "/"
+
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "06:30"
+
+    commit-message:
+      prefix: "deps(actions)"
+
+    labels:
+      - "deps"
+      - "actions"

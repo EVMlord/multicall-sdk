@@ -1,6 +1,6 @@
 {
   "name": "@evmlord/multicall-sdk",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "A lightweight library to batch multiple calls via a single eth_call using Multicall3 on 285+ chains.",
   "scripts": {
     "alpha": "npm publish --tag alpha",
@@ -52,6 +52,26 @@
     "email": "buidl@evmlord.dev",
     "url": "https://github.com/EVMlord"
   },
+  "maintainers": [
+    {
+      "name": "EVMlord",
+      "email": "buidl@evmlord.dev",
+      "url": "https://github.com/evmlord"
+    },
+    {
+      "name": "SmartEarnersTeam",
+      "email": "support@smartearners.team",
+      "url": "https://github.com/SmartEarnersTeam"
+    },
+    {
+      "name": "TechLadyVibes",
+      "url": "https://github.com/TechLadyVibes"
+    },
+    {
+      "name": "LucianaGold",
+      "url": "https://github.com/LucianaGold"
+    }
+  ],
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/EVMlord/multicall-sdk/issues"

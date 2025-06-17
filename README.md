@@ -3,17 +3,14 @@
 A lightweight TypeScript/JavaScript library built on **ethers v6** for DeFi dashboards, on-chain analytics and gas-optimised dApps.
 
 ![npm @evmlord/multicall-sdk latest version](https://img.shields.io/npm/v/@evmlord/multicall-sdk)
+[![CI Build Status](https://github.com/EVMlord/multicall-sdk/actions/workflows/ci.yml/badge.svg)](https://github.com/EVMlord/multicall-sdk/actions/workflows/ci.yml)
 ![MIT license for @evmlord/multicall-sdk](https://img.shields.io/npm/l/@evmlord/multicall-sdk)
-[![All npm downloads for @evmlord/multicall-sdk][downloads-img]][downloads-url]
 ![Weekly npm downloads for @evmlord/multicall-sdk](https://img.shields.io/npm/dw/@evmlord/multicall-sdk)
 ![TypeScript types included](https://img.shields.io/badge/types-included-blue)
 ![Minified bundle size](https://img.shields.io/bundlephobia/min/@evmlord/multicall-sdk)
-[![GitHub stars](https://img.shields.io/github/stars/evmlord/multicall-sdk?style=social)](https://github.com/evmlord/multicall-sdk)
-[![GitHub Issues][issues-img]][issues-url]
-[![Commitizen Friendly][commitizen-img]][commitizen-url]
-[![Semantic Release][semantic-release-img]][semantic-release-url]
 
 <!-- toc -->
+
 - [@evmlord/multicall-sdk – Batch smart-contract calls on Ethereum & EVM networks](#evmlordmulticall-sdk--batch-smart-contract-calls-on-ethereum--evm-networks)
   - [🚀 Why @evmlord/multicall-sdk?](#-why-evmlordmulticall-sdk)
   - [🔧 Installation (Node .js / TypeScript)](#-installation-node-js--typescript)
@@ -302,7 +299,7 @@ const calls: Call3Value[] = [
 ];
 
 // 3) Send them all in one tx
-const tx = await mc1.sendAggregate3Value(calls, {
+const tx = await mc4.sendAggregate3Value(calls, {
   gasLimit: 1_200_000,
 });
 console.log("Multicall tx hash:", tx.hash);
@@ -412,8 +409,9 @@ Released under the MIT License.
 
 © 2025 EVMlord
 
-[build-img]: https://github.com/evmlord/multicall-sdk/actions/workflows/release.yml/badge.svg
-[build-url]: https://github.com/evmlord/multicall-sdk/actions/workflows/release.yml
+<!-- [build-img]: https://github.com/evmlord/multicall-sdk/actions/workflows/release.yml/badge.svg
+[build-url]: https://github.com/evmlord/multicall-sdk/actions/workflows/release.yml -->
+
 [downloads-img]: https://img.shields.io/npm/dt/@evmlord/multicall-sdk
 [downloads-url]: https://www.npmtrends.com/@evmlord/multicall-sdk
 [issues-img]: https://img.shields.io/github/issues/evmlord/multicall-sdk
@@ -423,5 +421,13 @@ Released under the MIT License.
 [commitizen-img]: https://img.shields.io/badge/commitizen-friendly-brightgreen.svg
 [commitizen-url]: http://commitizen.github.io/cz-cli/
 
-<!-- [![Build Status][build-img]][build-url] -->
+<!-- [![GitHub stars](https://img.shields.io/github/stars/evmlord/multicall-sdk?style=social)](https://github.com/evmlord/multicall-sdk) -->
+<!-- [![GitHub Issues][issues-img]][issues-url] -->
+<!-- [![Commitizen Friendly][commitizen-img]][commitizen-url] -->
+<!-- [![Semantic Release][semantic-release-img]][semantic-release-url] -->
+<!-- [![Socket Badge](https://socket.dev/api/badge/npm/package/@evmlord/multicall-sdk/1.0.0)](https://socket.dev/npm/package/@evmlord/multicall-sdk/overview/1.0.0) -->
+<!-- [![jsdelivr badge](https://data.jsdelivr.com/v1/package/npm/@evmlord/multicall-sdk/badge?style=rounded)](https://www.jsdelivr.com/package/npm/@evmlord/multicall-sdk) -->
+<!-- [![install size](https://packagephobia.com/badge?p=@evmlord/multicall-sdk)](https://packagephobia.com/result?p=@evmlord/multicall-sdk) -->
+<!-- [![All npm downloads for @evmlord/multicall-sdk][downloads-img]][downloads-url] -->
+
 <!-- Keywords: Ethereum Multicall, EVM batch calls, ethers v6 sdk, solidity multicall library -->

@@ -1,0 +1,41 @@
+# Continuous Integration: run tests on every push/PR and weekly via cron
+name: CI
+
+on:
+  # Trigger on push to the dev branch and on pull‑requests targeting main
+  push:
+    branches: ["main", "dev"]
+  pull_request:
+  # Weekly sanity run every Monday @ 06:00 UTC
+  schedule:
+    - cron: "0 6 * * 1"
+  # Allows us to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    strategy:
+      matrix:
+        node-version: [20.x] # Target runtime
+
+    steps:
+      - name: 📥 Check out code
+        uses: actions/checkout@v4
+
+      - name: 🛠️  Set up Node.js ${{ matrix.node-version }} + Yarn cache
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: "yarn"
+          cache-dependency-path: "yarn.lock"
+
+      - name: 🚀 Enable Corepack (Yarn 1‒4 support)
+        run: corepack enable
+
+      - name: 📦 Install dependencies (Yarn, lockfile enforced)
+        run: yarn install --frozen-lockfile
+
+      - name: 🧪 Run unit tests
+        run: yarn test

@@ -52,6 +52,26 @@
     "email": "buidl@evmlord.dev",
     "url": "https://github.com/EVMlord"
   },
+  "maintainers": [
+    {
+      "name": "EVMlord",
+      "email": "buidl@evmlord.dev",
+      "url": "https://github.com/evmlord"
+    },
+    {
+      "name": "SmartEarnersTeam",
+      "email": "support@smartearners.team",
+      "url": "https://github.com/SmartEarnersTeam"
+    },
+    {
+      "name": "TechLadyVibes",
+      "url": "https://github.com/TechLadyVibes"
+    },
+    {
+      "name": "LucianaGold",
+      "url": "https://github.com/LucianaGold"
+    }
+  ],
   "license": "MIT",
   "bugs": {
     "url": "https://github.com/EVMlord/multicall-sdk/issues"

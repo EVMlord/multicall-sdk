@@ -20,7 +20,7 @@ A lightweight TypeScript/JavaScript library built on **ethers v6** for DeFi dash
   - [📖 Quick-Start Example with ethers v6](#-quick-start-example-with-ethers-v6)
     - [1. Create your Multicall client](#1-create-your-multicall-client)
     - [2. Batch simple eth_calls](#2-batch-simple-eth_calls)
-  - [⚙️ API Reference](#-api-reference)
+  - [⚙️ API Reference](#️-api-reference)
     - [Batch Methods](#batch-methods)
       - [What’s happening here?](#whats-happening-here)
       - [Sending State-Changing Multicall Transactions](#sending-state-changing-multicall-transactions)

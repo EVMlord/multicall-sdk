@@ -18,7 +18,12 @@ import type {
   ConstructorArgs,
   MulticallResult,
 } from "./types";
-import { _fullyUnwrap, decodeRevert, isEip1193Provider } from "./helpers";
+import {
+  _fullyUnwrap,
+  decodeRevert,
+  isEip1193Provider,
+  validateCall,
+} from "./helpers";
 
 /**
  * Multicall wraps the Multicall3 Solidity contract for batching on-chain calls.
@@ -98,7 +103,7 @@ class Multicall {
     this.iface = new Interface(Multicall3ABI);
 
     // for stateful calls:
-    if (signer) this.contract = new Contract(address, this.iface, signer);
+    if (signer) this.contract = new Contract(this.target, this.iface, signer);
   }
 
   /**
@@ -143,7 +148,7 @@ class Multicall {
   ): Promise<{ blockNumber: bigint; returnData: string[] }> {
     const payload = calls.map(({ contract, functionFragment, args }) => ({
       target: contract.target,
-      callData: contract.interface.encodeFunctionData(functionFragment, args),
+      callData: validateCall({ contract, functionFragment, args }),
     }));
 
     const [blockNumber, returnData] = await this.rpcCall<[bigint, string[]]>(
@@ -188,7 +193,7 @@ class Multicall {
     // Build the call payload
     const payload = calls.map(({ contract, functionFragment, args }) => ({
       target: contract.target,
-      callData: contract.interface.encodeFunctionData(functionFragment, args),
+      callData: validateCall({ contract, functionFragment, args }),
     }));
 
     // Solidity signature: returns (Result[] memory), so decodeFunctionResult gives [MulticallResult[]]
@@ -275,7 +280,7 @@ class Multicall {
     // Build the payload
     const payload = calls.map(({ contract, functionFragment, args }) => ({
       target: contract.target,
-      callData: contract.interface.encodeFunctionData(functionFragment, args),
+      callData: validateCall({ contract, functionFragment, args }),
     }));
 
     // Solidity returns (uint256, bytes32, Result[]), so decodeFunctionResult gives [bigint, string, MulticallResult[]]
@@ -372,7 +377,7 @@ class Multicall {
       ({ contract, functionFragment, args, allowFailure }) => ({
         target: contract.target,
         allowFailure,
-        callData: contract.interface.encodeFunctionData(functionFragment, args),
+        callData: validateCall({ contract, functionFragment, args }),
       })
     );
 
@@ -451,7 +456,7 @@ class Multicall {
         target: contract.target,
         allowFailure,
         value,
-        callData: contract.interface.encodeFunctionData(functionFragment, args),
+        callData: validateCall({ contract, functionFragment, args }),
       })
     );
 
@@ -555,7 +560,7 @@ class Multicall {
         target: contract.target,
         allowFailure,
         value,
-        callData: contract.interface.encodeFunctionData(functionFragment, args),
+        callData: validateCall({ contract, functionFragment, args }),
       })
     );
 

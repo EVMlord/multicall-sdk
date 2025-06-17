@@ -1,18 +1,20 @@
-# @evmlord/multicall-sdk
+# @evmlord/multicall-sdk – Batch smart-contract calls on Ethereum & EVM networks
 
-![npm version](https://img.shields.io/npm/v/@evmlord/multicall-sdk)
-![License](https://img.shields.io/npm/l/@evmlord/multicall-sdk)
-[![All downloads][downloads-img]][downloads-url]
-![Weekly downloads](https://img.shields.io/npm/dw/@evmlord/multicall-sdk)
-![TypeScript](https://img.shields.io/badge/types-included-blue)
-![Bundle size](https://img.shields.io/bundlephobia/min/@evmlord/multicall-sdk)
+A lightweight TypeScript/JavaScript library built on **ethers v6** for DeFi dashboards, on-chain analytics and gas-optimised dApps.
+
+![npm @evmlord/multicall-sdk latest version](https://img.shields.io/npm/v/@evmlord/multicall-sdk)
+![MIT license for @evmlord/multicall-sdk](https://img.shields.io/npm/l/@evmlord/multicall-sdk)
+[![All npm downloads for @evmlord/multicall-sdk][downloads-img]][downloads-url]
+![Weekly npm downloads for @evmlord/multicall-sdk](https://img.shields.io/npm/dw/@evmlord/multicall-sdk)
+![TypeScript types included](https://img.shields.io/badge/types-included-blue)
+![Minified bundle size](https://img.shields.io/bundlephobia/min/@evmlord/multicall-sdk)
 [![GitHub stars](https://img.shields.io/github/stars/evmlord/multicall-sdk?style=social)](https://github.com/evmlord/multicall-sdk)
-[![Issues][issues-img]][issues-url]
+[![GitHub Issues][issues-img]][issues-url]
 [![Commitizen Friendly][commitizen-img]][commitizen-url]
 [![Semantic Release][semantic-release-img]][semantic-release-url]
 
-> **Multicall SDK** for **Ethereum**, **EVM-compatible** chains and **DeFi** apps.  
-> Batch on-chain calls, reduce RPC requests, decode results, retrieve block info & handle failures—all in one lightweight TypeScript/JavaScript library built on **ethers v6**.
+<!-- toc -->
+<!-- tocstop -->
 
 ---
 
@@ -35,17 +37,7 @@
 
 ---
 
-## Features
-
-- **Batch calls** (`aggregate`, `tryAggregate`, `aggregate3`, `aggregate3Value`, `blockAndAggregate`, `tryBlockAndAggregate`)
-- **View helpers**: `getBlockNumber`, `getBlockHash`, `getLastBlockHash`, `getCurrentBlockTimestamp`, `getCurrentBlockGasLimit`, `getCurrentBlockCoinbase`, `getEthBalance`, `getBasefee`, `getChainId`
-- **Native `bigint`** return values (no `BigNumber` overhead)
-- Fully typed with **TypeScript** (declarations included)
-- **Single entry-point**: import all constants, ABIs and types from `@evmlord/multicall-sdk`
-
----
-
-## Installation
+## 🔧 Installation (Node .js / TypeScript)
 
 ```bash
 # via yarn
@@ -56,69 +48,52 @@ npm install @evmlord/multicall-sdk
 
 ```
 
-## Usage
+## 📖 Quick-Start Example with ethers v6
 
 **<!-- CHAINS-COUNT -->285<!-- CHAINS-COUNT -->** EVM-compatible networks are supported by default, and custom networks can be supported by providing a deployed Multicall contract address.
 
 👉 See the complete list in [`SUPPORTED_NETWORKS.md`](./SUPPORTED_NETWORKS.md).
 
-### Constructor
-
-- With `chainId`
+### 1. Create your Multicall client
 
 ```ts
-import { ethers } from "ethers";
-import {
-  Multicall,
-  MulticallRawResult,
-  Call,
-  Call3,
-  Call3Value,
-  MulticallConstructorArgs,
-} from "@evmlord/multicall-sdk";
-import erc20Abi from "./abi/erc20.json";
+import { JsonRpcProvider, WebSocketProvider } from "ethers";
+import { Multicall } from "@evmlord/multicall-sdk";
 
-const rpc = "https://your-rpc-here.org/";
+// 1) HTTP RPC URL
+const mc1 = new Multicall({
+  provider: "https://mainnet.infura.io/v3/…",
+  chainId: 1,
+});
 
-// 1) Create an ethers provider (e.g. Infura, Alchemy, JSON-RPC, etc.)
-const provider = new ethers.JsonRpcProvider("https://rpc.ankr.com/eth");
+// 2) Browser/EIP-1193 (e.g. MetaMask)
+const mc2 = new Multicall({
+  provider: window.ethereum, // auto-wrapped
+  multicallAddress: "0x…", // override default if deployed elsewhere
+});
 
-const multicall = new Multicall({
-  provider // your ethers provider
-  chainId: ChainId.MAINNET, // from exported ChainId enum
+// 3) Already-constructed ethers Provider
+const ws = new WebSocketProvider("wss://…");
+const mc3 = new Multicall({ provider: ws, chainId: 5 });
+
+// 4) Custom signer for writing txs
+const signer = wallet.connect(provider);
+const mc4 = new Multicall({
+  provider: provider,
+  signer: signer,
+  chainId: 56,
 });
 ```
 
-- With custom Multicall address
+### 2. Batch simple eth_calls
 
 ```ts
-import { ethers } from "ethers";
-import {
-  Multicall,
-  MulticallRawResult,
-  Call,
-  Call3,
-  Call3Value,
-  MulticallConstructorArgs,
-} from "@evmlord/multicall-sdk";
-import erc20Abi from "./abi/erc20.json";
+import erc20Abi from "./abi/ERC20.json";
+import { Call } from "@evmlord/multicall-abi";
 
-// 1) Create an ethers provider (e.g. Infura, Alchemy, JSON-RPC, etc.)
-const provider = new ethers.JsonRpcProvider("https://rpc.ankr.com/eth");
-
-// 2) Instantiate the SDK
-const multicall = new Multicall({
-  provider, // your ethers provider
-  multicallAddress: "The address of the deployed multicall3 contract", // override default if deployed elsewhere
-});
-```
-
-### Aggregating
-
-```ts
-// 3) Prepare one or more Calls
 const token = new ethers.Contract("0x…ERC20", erc20Abi, provider);
 
+// Prepare calls
 const calls: Call[] = [
   { contract: token, functionFragment: "balanceOf", args: ["0xYourAddress1"] },
   { contract: token, functionFragment: "balanceOf", args: ["0xYourAddress2"] },
@@ -126,83 +101,95 @@ const calls: Call[] = [
   { contract: token, functionFragment: "totalSupply", args: [] },
 ];
 
-// 4) Batch them
-const { blockNumber, returnData } = await multicall.aggregate(calls);
+// Execute a single eth_call via Multicall
+const { blockNumber, returnData } = await mc1.aggregate(calls);
 
-// returnData is string[] of raw hex
-// To decode:
-console.log(
-  "Balance of Address 1:",
-  token.interface.decodeFunctionResult("balanceOf", returnData[0])[0]
+// Decode your results
+const [balance1] = token.interface.decodeFunctionResult(
+  "balanceOf",
+  returnData[0]
 );
-console.log(
-  "Balance of Address 2:",
-  token.interface.decodeFunctionResult("balanceOf", returnData[1])[0]
+const [balance2] = token.interface.decodeFunctionResult(
+  "balanceOf",
+  returnData[1]
 );
-console.log(
-  "Balance of Address 3:",
-  token.interface.decodeFunctionResult("balanceOf", returnData[2])[0]
+const [balance3] = token.interface.decodeFunctionResult(
+  "balanceOf",
+  returnData[2]
 );
-console.log(
-  "TotalSupply:",
-  token.interface.decodeFunctionResult("totalSupply", returnData[4])[0]
+const [supply] = token.interface.decodeFunctionResult(
+  "totalSupply",
+  returnData[3]
 );
-console.log("At block:", blockNumber);
+
+console.log({
+  blockNumber,
+  balance1,
+  balance2,
+  balance3,
+  supply,
+});
+
+/* 
+ console:
+{
+  blockNumber: 55038412n,
+  balance1: 76950775000000000000000n,
+  balance2: 0n,
+  balance3: 1583902570428472973924450219389n,
+  supply: 10000000000000000000000000000000000000000000n
+} 
+*/
 ```
 
-#### Batch Methods
+---
 
-- `aggregate(calls: Call[])`
-  Reverts on any failure.
+## ⚙️ API Reference
 
-```ts
-const { blockNumber, returnData } = await multicall.aggregate(calls);
-```
+### Batch Methods
 
-- `tryAggregate(requireSuccess: boolean, calls: Call[])`
-
-  Continue past failed calls; returns `Array<[success, decodedOrRaw]>`.
-
-- `tryBlockAndAggregate(requireSuccess: boolean, calls: Call[])`
-
-  Like `tryAggregate`, plus returns `{ blockNumber, blockHash, returnData }`.
-
-- `blockAndAggregate(calls: Call[])`
-
-  Alias for `tryBlockAndAggregate(true, calls)`.
-
-- `aggregate3(calls: Call3[])`
-
-  Allow individual failures via `allowFailure` flag on each call.
-
-- `aggregate3Value(calls: Call3Value[])`
-
-  Like `aggregate3`, but each call can send ETH (`value`) and you supply the total `msg.value`.
+| Method                                                           | Description                                                                                                                                                                      |
+| ---------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `aggregate(calls: Call[])`                                       | Reverts on **any** failing call. Returns <br>`{ blockNumber, returnData: string[] }`.                                                                                            |
+| `tryAggregate(requireSuccess, calls: Call[])`                    | Optionally continue on failed calls. Returns <br>`Array<{ success: boolean, returnData: string }>`                                                                               |
+| `blockAndAggregate(calls: Call[])`                               | Alias for `tryBlockAndAggregate(true, calls)`. Returns <br>`{ blockNumber, blockHash, returnData }`.                                                                             |
+| `tryBlockAndAggregate(requireSuccess, calls: Call[])`            | Same as `tryAggregate` but also provides full block info plus per-call success flags.                                                                                            |
+| `aggregate3(calls: Call3[])`                                     | Multicall 3 style: each call has an `allowFailure` flag, and return values are auto-decoded to JS tuples/structs.                                                                |
+| `aggregate3Value(calls: Call3Value[])`                           | Like `aggregate3`, but supports per-call native ETH **value** and automatically sums `msg.value`.                                                                                |
+| `sendAggregate3Value(calls: Call3Value[], overrides: Overrides)` | Like `aggregate3Value`, but for real on-chain writes, accepts optional Ethers overrides (gasLimit, gasPrice, etc) and returns `TransactionResponse`, which you can `.wait()` on. |
 
 ```ts
 
 // ── aggregate3 example ─────────────────────────────────────────
 // call two view methods in one batch, but let one of them fail
 const calls3: Call3[] = [
-  {
-    contract:        token,
-    functionFragment:'balanceOf',
-    args:            [ user ],
-    allowFailure:    true
-  },
-  {
-    contract:        token,
-    functionFragment:'nonExistedProperty', // this will throw
-    args:            [],
-    allowFailure:    true
-  }
-]
+    {
+      contract: token,
+      functionFragment: "nonExistedProperty", // this will throw
+      args: [],
+      allowFailure: true,
+    },
+    {
+      contract: token,
+      functionFragment: "balanceOf",
+      args: ["0x5500..."], // wallet address here
+      allowFailure: true,
+    },
+  ];
 
-const results3 = await multicall.aggregate3(calls3)
-// results3 is Array<[success: boolean, data]>
-console.log('balanceOf →', results3[0])
-console.log('nonExistedProperty →', results3[1])
+  const results3 = await mc1.aggregate3(calls3);
 
+  console.log({ results3 });
+
+  /*
+console:
+{
+  results3: [
+    [ false, 'Revert: (unrecognized revert: 0x…)' ],
+    [ true, 76950775000000000000000n ]
+  ]
+}
+ */
 
 // ── aggregate3Value example ────────────────────────────────────
 // imagine a payable helper that charges a small fee per call
@@ -231,10 +218,22 @@ const calls3Value: Call3Value[] = [
   }
 ]
 
-const results3Value = await multicall.aggregate3Value(calls3Value)
+const results3Value = await mc1.aggregate3Value(calls3Value)
 // returns Array<[success: boolean, data]>
-console.log('getSomeData →', results3Value[0])
-console.log('getOtherData →', results3Value[1])
+{
+  const [ok, getSomeData] = results3Value[0];
+  if (ok) {
+  console.log('getSomeData →', getSomeData)
+  }
+
+}
+ {
+    const [ok, getOtherData] = results3Value[1];
+    if (ok) {
+      console.log('getOtherData →', getOtherData)
+    }
+  }
+
 ```
 
 #### What’s happening here?
@@ -245,6 +244,80 @@ console.log('getOtherData →', results3Value[1])
 - `aggregate3Value`
   Each call can carry its own ETH payment (`value`), and the SDK automatically sums them into one `msg.value` for the batch. Any call marked `allowFailure: true` won’t abort the entire batch if it reverts.
 
+#### Sending State-Changing Multicall Transactions
+
+Up until now we’ve only covered the “view” methods (`aggregate`, `tryAggregate`, `aggregate3`, etc). If you need to batch together **state-changing** calls (optionally with ETH attached) into a **single on-chain tx**, you can use `sendAggregate3Value`:
+
+```ts
+import { Multicall, Call3Value, ChainId } from "@evmlord/multicall-sdk";
+import { ethers } from "ethers";
+
+// 1) Create a signer-backed Multicall instance
+const provider = new ethers.JsonRpcProvider("https://rpc.ankr.com/eth");
+const wallet = new ethers.Wallet(process.env.PRIVATE_KEY!, provider);
+
+const multicall = new Multicall({
+  provider,
+  chainId: ChainId.MAINNET,
+  signer: wallet, // <- needed for txs
+});
+
+// 2) Prepare your payable calls
+//    each call3Value: { contract, functionFragment, args, allowFailure, value }
+const fee = ethers.parseUnits("0.001", "ether"); // per-call ETH fee
+const myHelper = new ethers.Contract("0xHelper…", HelperABI, provider);
+
+const calls: Call3Value[] = [
+  {
+    contract: myHelper,
+    functionFragment: "depositAndFetch",
+    args: ["0xYourAddress"],
+    allowFailure: false,
+    value: fee,
+  },
+  {
+    contract: myHelper,
+    functionFragment: "updateRecord",
+    args: [42, "hello"],
+    allowFailure: true,
+    value: fee,
+  },
+  // …etc
+];
+
+// 3) Send them all in one tx
+const tx = await mc1.sendAggregate3Value(calls, {
+  gasLimit: 1_200_000,
+});
+console.log("Multicall tx hash:", tx.hash);
+
+// 4) Wait for it to be mined
+const receipt = await tx.wait();
+console.log("→ mined in block", receipt.blockNumber);
+```
+
+##### API
+
+```ts
+/**
+ * Batch-execute multiple non-view calls (each may carry its own ETH value)
+ * in a single on-chain TX via Multicall3.aggregate3Value.
+ *
+ * @param calls     – Array of { contract, functionFragment, args, allowFailure, value }
+ * @param overrides – Ethers transaction overrides (gasLimit, maxPriorityFeePerGas, etc)
+ * @returns          Promise<TransactionResponse>
+ * @throws if no Signer was provided in the constructor.
+ */
+sendAggregate3Value(
+  calls: Call3Value[],
+  overrides?: Overrides
+): Promise<TransactionResponse>;
+```
+
+- `allowFailure: true` on any `Call3Value` lets that individual call revert without failing the entire batch.
+
+- The SDK automatically sums up all `value` fields into one `msg.value` on the multicall.
+
 ### Helper Functions
 
 All return either `Promise<bigint>` or `Promise<string>`:
@@ -253,7 +326,7 @@ All return either `Promise<bigint>` or `Promise<string>`:
   Gets the ETH balance of an address
 
   ```ts
-  const ethBalance = await multicall.getEthBalance("address");
+  const ethBalance = await mc1.getEthBalance("address");
   ```
 
 - `getBlockHash`
@@ -262,66 +335,66 @@ All return either `Promise<bigint>` or `Promise<string>`:
   Only works for 256 most recent, excluding current according to [Solidity docs](https://docs.soliditylang.org/en/v0.4.24/units-and-global-variables.html#block-and-transaction-properties)
 
   ```ts
-  const blockHash = await multicall.getBlockHash(blockNumber);
+  const blockHash = await mc1.getBlockHash(blockNumber);
   ```
 
 - `getLastBlockHash`
   Gets the last blocks hash
 
   ```ts
-  const lastBlockHash = await multicall.getLastBlockHash();
+  const lastBlockHash = await mc1.getLastBlockHash();
   ```
 
 - `getCurrentBlockTimestamp`
   Gets the current block timestamp
 
   ```ts
-  const currentBlockTimestamp = await multicall.getCurrentBlockTimestamp();
+  const currentBlockTimestamp = await mc1.getCurrentBlockTimestamp();
   ```
 
 - `getCurrentBlockDifficulty`
   Gets the current block difficulty
 
   ```ts
-  const currentBlockDifficulty = await multicall.getCurrentBlockDifficulty();
+  const currentBlockDifficulty = await mc1.getCurrentBlockDifficulty();
   ```
 
 - `getCurrentBlockGasLimit`
   Gets the current block gas limit
 
   ```ts
-  const currentBlockGasLimit = await multicall.getCurrentBlockGasLimit();
+  const currentBlockGasLimit = await mc1.getCurrentBlockGasLimit();
   ```
 
 - `getCurrentBlockCoinbase`
   Gets the current block coinbase
 
   ```ts
-  const currentBlockCoinbase = await multicall.getCurrentBlockCoinbase();
+  const currentBlockCoinbase = await mc1.getCurrentBlockCoinbase();
   ```
 
-## Testing
+## 🧪 Testing
 
 This SDK ships with a comprehensive Mocha + Chai + Sinon test suite.
 
 ```bash
-# run tests
+# Run unit tests (Mocha + Chai + Sinon)
 yarn test
 
 ```
 
-## Contributing
+## 🤝 Contributing
 
 1. Fork & clone
 2. `yarn install`
-3. Write code under `src/`
-4. Add tests under `test/`
-5. Run `yarn test`
-6. Submit a PR
+3. Develop in `src/`, add tests in `test/`
+4. Run `yarn test` & Submit a PR
 
-## License
+## 📜 LICENSE
 
-MIT License - Copyright (©) 2025 EVMlord
+Released under the MIT License.
+
+© 2025 EVMlord
 
 [build-img]: https://github.com/evmlord/multicall-sdk/actions/workflows/release.yml/badge.svg
 [build-url]: https://github.com/evmlord/multicall-sdk/actions/workflows/release.yml
@@ -335,3 +408,4 @@ MIT License - Copyright (©) 2025 EVMlord
 [commitizen-url]: http://commitizen.github.io/cz-cli/
 
 <!-- [![Build Status][build-img]][build-url] -->
+<!-- Keywords: Ethereum Multicall, EVM batch calls, ethers v6 sdk, solidity multicall library -->

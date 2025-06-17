@@ -14,13 +14,13 @@ A lightweight TypeScript/JavaScript library built on **ethers v6** for DeFi dash
 [![Semantic Release][semantic-release-img]][semantic-release-url]
 
 <!-- toc -->
-- [@evmlord/multicall-sdk – Batch smart-contract calls on Ethereum & EVM networks](#evmlordmulticall-sdk-batch-smart-contract-calls-on-ethereum-evm-networks)
+- [@evmlord/multicall-sdk – Batch smart-contract calls on Ethereum & EVM networks](#evmlordmulticall-sdk--batch-smart-contract-calls-on-ethereum--evm-networks)
   - [🚀 Why @evmlord/multicall-sdk?](#-why-evmlordmulticall-sdk)
-  - [🔧 Installation (Node .js / TypeScript)](#-installation-node-js-typescript)
+  - [🔧 Installation (Node .js / TypeScript)](#-installation-node-js--typescript)
   - [📖 Quick-Start Example with ethers v6](#-quick-start-example-with-ethers-v6)
     - [1. Create your Multicall client](#1-create-your-multicall-client)
     - [2. Batch simple eth_calls](#2-batch-simple-eth_calls)
-  - [⚙️ API Reference](#️-api-reference)
+  - [⚙️ API Reference](#%EF%B8%8F-api-reference)
     - [Batch Methods](#batch-methods)
       - [What’s happening here?](#whats-happening-here)
       - [Sending State-Changing Multicall Transactions](#sending-state-changing-multicall-transactions)

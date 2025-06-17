@@ -1,0 +1,39 @@
+# Continuous Integration: run tests on every push/PR and weekly via cron
+name: CI
+
+on:
+  # Trigger on push to the dev branch and on pull‑requests targeting main
+  push:
+    branches: ["main", "dev"]
+  pull_request:
+  # Run once a week (Mondays @ 06:00 UTC) so the badge stays green even when
+  # the repo is quiet and to surface dependency breakage early.
+  schedule:
+    - cron: "0 6 * * 1"
+  # Allows us to run this workflow manually from the Actions tab
+  workflow_dispatch:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+
+    # Test against two active LTS Node versions
+    strategy:
+      matrix:
+        node-version: [18.x, 20.x]
+
+    steps:
+      - name: Check out code
+        uses: actions/checkout@v4
+
+      - name: Use Node.js ${{ matrix.node-version }}
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ matrix.node-version }}
+          cache: "npm" # node‑modules cache keyed on lockfile hash
+
+      - name: Install dependencies (clean)
+        run: npm ci
+
+      - name: Run unit tests
+        run: npm run test

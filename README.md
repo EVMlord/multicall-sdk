@@ -4,6 +4,7 @@ A lightweight TypeScript/JavaScript library built on **ethers v6** for DeFi dash
 
 ![npm @evmlord/multicall-sdk latest version](https://img.shields.io/npm/v/@evmlord/multicall-sdk)
 ![MIT license for @evmlord/multicall-sdk](https://img.shields.io/npm/l/@evmlord/multicall-sdk)
+[![CI](https://github.com/EVMlord/multicall-sdk/actions/workflows/ci.yml/badge.svg)](https://github.com/EVMlord/multicall-sdk/actions/workflows/ci.yml)
 [![All npm downloads for @evmlord/multicall-sdk][downloads-img]][downloads-url]
 ![Weekly npm downloads for @evmlord/multicall-sdk](https://img.shields.io/npm/dw/@evmlord/multicall-sdk)
 ![TypeScript types included](https://img.shields.io/badge/types-included-blue)
@@ -12,6 +13,9 @@ A lightweight TypeScript/JavaScript library built on **ethers v6** for DeFi dash
 [![GitHub Issues][issues-img]][issues-url]
 [![Commitizen Friendly][commitizen-img]][commitizen-url]
 [![Semantic Release][semantic-release-img]][semantic-release-url]
+[![Socket Badge](https://socket.dev/api/badge/npm/package/@evmlord/multicall-sdk/1.0.0)](https://socket.dev/npm/package/@evmlord/multicall-sdk/overview/1.0.0)
+[![install size](https://packagephobia.com/badge?p=@evmlord/multicall-sdk)](https://packagephobia.com/result?p=@evmlord/multicall-sdk)
+[![jsdelivr badge](https://data.jsdelivr.com/v1/package/npm/@evmlord/multicall-sdk/badge?style=rounded)](https://www.jsdelivr.com/package/npm/@evmlord/multicall-sdk)
 
 <!-- toc -->
 

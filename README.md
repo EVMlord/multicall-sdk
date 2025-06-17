@@ -14,6 +14,7 @@ A lightweight TypeScript/JavaScript library built on **ethers v6** for DeFi dash
 [![Semantic Release][semantic-release-img]][semantic-release-url]
 
 <!-- toc -->
+
 - [@evmlord/multicall-sdk – Batch smart-contract calls on Ethereum & EVM networks](#evmlordmulticall-sdk--batch-smart-contract-calls-on-ethereum--evm-networks)
   - [🚀 Why @evmlord/multicall-sdk?](#-why-evmlordmulticall-sdk)
   - [🔧 Installation (Node .js / TypeScript)](#-installation-node-js--typescript)
@@ -302,7 +303,7 @@ const calls: Call3Value[] = [
 ];
 
 // 3) Send them all in one tx
-const tx = await mc1.sendAggregate3Value(calls, {
+const tx = await mc4.sendAggregate3Value(calls, {
   gasLimit: 1_200_000,
 });
 console.log("Multicall tx hash:", tx.hash);

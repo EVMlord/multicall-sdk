@@ -6,8 +6,7 @@ on:
   push:
     branches: ["main", "dev"]
   pull_request:
-  # Run once a week (Mondays @ 06:00 UTC) so the badge stays green even when
-  # the repo is quiet and to surface dependency breakage early.
+  # Weekly sanity run every Monday @ 06:00 UTC
   schedule:
     - cron: "0 6 * * 1"
   # Allows us to run this workflow manually from the Actions tab
@@ -40,4 +39,6 @@ jobs:
         run: yarn install --frozen-lockfile
 
       - name: 🧪 Run unit tests
+        env:
+          NODE_OPTIONS: "--loader ts-node/esm"
         run: yarn test

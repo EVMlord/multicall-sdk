@@ -6,6 +6,7 @@
     "alpha": "npm publish --tag alpha",
     "gen": "ts-node scripts/gen-multicall.ts",
     "gen:readme": "ts-node scripts/generate-supported-networks.ts",
+    "gen:toc": "ts-node scripts/generate-toc.ts",
     "build": "tsc",
     "typecheck": "tsc --noEmit",
     "prepublishOnly": "yarn test && yarn gen:readme && yarn build",

@@ -9,7 +9,7 @@
     "gen:toc": "ts-node scripts/generate-toc.ts",
     "build": "tsc",
     "typecheck": "tsc --noEmit",
-    "prepublishOnly": "yarn test && yarn gen:readme && yarn build",
+    "prepublishOnly": "yarn test && yarn gen:readme && yarn gen:toc && yarn build",
     "test": "mocha -r ts-node/register \"test/**/*.spec.ts\" --exit",
     "dev:link": "node scripts/copy-files.mjs ../dist/ ../package.json ../README.md ../link-out/ --replace && (cd link-out && yarn link)",
     "watch:link": "tsc -w & nodemon -q -e js,ts --exec \"yarn dev:link\""

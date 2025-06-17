@@ -39,6 +39,7 @@ jobs:
         run: yarn install --frozen-lockfile
 
       - name: 🧪 Run unit tests
-        env:
-          NODE_OPTIONS: "--loader ts-node/esm"
-        run: yarn test
+        # Use ts-node's ESM loader so both Node 18 and 20 can import the ESM‑only
+        # version of chai and any other ESM deps.
+        run: |
+          npx mocha --loader ts-node/esm "test/**/*.spec.ts" --exit

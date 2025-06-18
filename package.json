@@ -10,7 +10,7 @@
     "build": "tsc",
     "typecheck": "tsc --noEmit",
     "prepublishOnly": "yarn test && yarn gen:readme && yarn gen:toc && yarn build",
-    "test": "mocha -r ts-node/register \"test/**/*.spec.ts\" --exit",
+    "test": "mocha -r tsx \"test/**/*.spec.ts\" --exit",
     "dev:link": "node scripts/copy-files.mjs ../dist/ ../package.json ../README.md ../link-out/ --replace && (cd link-out && yarn link)",
     "watch:link": "tsc -w & nodemon -q -e js,ts --exec \"yarn dev:link\""
   },
@@ -18,19 +18,21 @@
     "type": "git",
     "url": "git+https://github.com/EVMlord/multicall-sdk.git"
   },
-  "main": "./dist/index.js",
+  "type": "module",
+  "main": "./cjs/index.cjs",
   "module": "./dist/index.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
       "import": "./dist/index.js",
-      "require": "./dist/index.js",
+      "require": "./cjs/index.cjs",
       "types": "./dist/index.d.ts",
       "default": "./dist/index.js"
     }
   },
   "files": [
     "dist/**/*",
+    "cjs/index.cjs",
     "README.md",
     "LICENSE"
   ],

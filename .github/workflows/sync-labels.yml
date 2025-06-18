@@ -1,0 +1,30 @@
+# Ensure repository labels exist for Dependabot and other bots
+# Run manually or on every push to main so labels stay in sync
+
+name: Sync labels
+
+on:
+  workflow_dispatch: # allow manual trigger from the Actions tab
+  push:
+    branches: ["main", "dev"]
+    paths:
+      # re‑run if any of these files change
+      - .github/workflows/sync-labels.yml
+      - .github/labels.yml
+
+permissions:
+  contents: read
+  issues: write # required to create / update labels
+
+jobs:
+  update-labels:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: .github/labels.yml
+
+      - name: ✨ Sync labels
+        uses: EndBug/label-sync@v2
+        with:
+          config-file: .github/labels.yml

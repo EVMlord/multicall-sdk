@@ -39,3 +39,6 @@ jobs:
 
       - name: 🧪 Run unit tests
         run: yarn test
+
+      - name: 🔨 Run Build tests
+        run: yarn typecheck

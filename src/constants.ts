@@ -393,7 +393,7 @@ const Multicall: AddressType = {
   ...CUSTOM_MULTICALL, // overrides win
 };
 
-export const getMulticallAddress = (chain: ChainId): String | undefined =>
+export const getMulticallAddress = (chain: ChainId): string | undefined =>
   Multicall[chain];
 
 export const addresses = {

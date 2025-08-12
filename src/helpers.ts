@@ -45,6 +45,10 @@ export function validateCall(call: Call): string {
   }
 }
 
+function isPlainObject(x: any): x is Record<string, any> {
+  return !!x && typeof x === "object" && !Array.isArray(x);
+}
+
 /**
  * Recursively “unwrap” anything returned by ethers.decodeFunctionResult (which is either
  *   • an `EthersResult` proxy (for named structs, or tuple/tuple[]), or
@@ -62,33 +66,57 @@ export function validateCall(call: Call): string {
  *       that and fall back to `.toArray(false)`, which returns a plain Array of child Results.
  */
 export function _fullyUnwrap(x: any): any {
-  // 1) Check: is `x` an ethers.Result (possibly a Proxy)?
-  if (isEthersResult(x)) {
+  // 0) Peel nested "_" shells: { _:{...} } → {...}, repeated
+  let v = x;
+  while (isPlainObject(v) && "_" in v && Object.keys(v).length === 1) {
+    v = v._;
+  }
+
+  // 1) Check: is `v` an ethers.Result (possibly a Proxy)?
+  if (isEthersResult(v)) {
     try {
       // --- CASE 1: named struct (or named‐struct[]) ---
-      // If `x` really is a named struct (or array of named structs),
+      // If `v` really is a named struct (or array of named structs),
       // .toObject(true) will succeed:
-      return x.toObject(/* deep= */ true);
+      return v.toObject(/* deep= */ true);
     } catch (_err) {
       // --- CASE 99: unnamed tuple or tuple[] ---
       // It wasn’t a named struct, so treat it as an unnamed tuple or tuple[]:
-      const arr = x.toArray(/* deep= */ false);
+      const arr = v.toArray(/* deep= */ false);
 
       // Recurse into each child, but pass along the same `cases` array:
       return arr.map((child) => _fullyUnwrap(child));
     }
   }
 
-  // 2) If `x` is a plain JS array (Array.isArray(x) === true), we want to
-  //    recurse *into* each element. **Do not return `x` outright.**
-  if (Array.isArray(x)) {
+  // 2) If `v` is a plain JS array (Array.isArray(v) === true), we want to
+  //    recurse *into* each element. **Do not return `v` outright.**
+  if (Array.isArray(v)) {
     // Recurse on every element, passing down the same `cases` array:
-    return x.map((child) => _fullyUnwrap(child));
+    return v.map((child) => _fullyUnwrap(child));
   }
 
-  // 3) Otherwise `x` is a primitive (string, bigint, number, boolean, etc.).
+  // 3) Plain object with lingering "_" plus other keys
+  if (isPlainObject(v) && "_" in v) {
+    const inner = _fullyUnwrap(v._);
+    const { _, ...restRaw } = v as any;
+    const rest = Object.fromEntries(
+      Object.entries(restRaw).map(([k, val]) => [k, _fullyUnwrap(val)])
+    );
+
+    // If "_" holds an array, that's already unwrapped; return it.
+    if (Array.isArray(inner)) return inner;
+
+    // If "_" holds an object, merge; named fields in `rest` win.
+    if (isPlainObject(inner)) return { ...inner, ...rest };
+
+    // "_" holds a primitive: return `rest` if it has anything, else the primitive.
+    return Object.keys(rest).length ? rest : inner;
+  }
+
+  // 4) Otherwise `v` is a primitive (string, bigint, number, boolean, etc.).
   //    There’s nothing more to unwrap, so just return it:
-  return x;
+  return v;
 }
 
 /**

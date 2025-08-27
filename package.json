@@ -7,32 +7,30 @@
     "gen": "ts-node scripts/gen-multicall.ts",
     "gen:readme": "ts-node scripts/generate-supported-networks.ts",
     "gen:toc": "ts-node scripts/generate-toc.ts",
-    "build": "tsc",
+    "build": "tsup",
     "typecheck": "tsc --noEmit",
-    "prepublishOnly": "yarn test && yarn gen:readme && yarn gen:toc && yarn build",
+    "prepublishOnly": "pnpm test && pnpm gen:readme && pnpm gen:toc && pnpm build",
     "test": "mocha -r tsx \"test/**/*.spec.ts\" --exit",
-    "dev:link": "node scripts/copy-files.mjs ../dist/ ../package.json ../README.md ../link-out/ --replace && (cd link-out && yarn link)",
-    "watch:link": "tsc -w & nodemon -q -e js,ts --exec \"yarn dev:link\""
+    "dev:link": "node scripts/copy-files.mjs ../dist/ ../package.json ../README.md ../link-out/ --replace && (cd link-out && pnpm link)",
+    "watch:link": "tsc -w & nodemon -q -e js,ts --exec \"pnpm dev:link\""
   },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/EVMlord/multicall-sdk.git"
   },
   "type": "module",
-  "main": "./cjs/index.cjs",
-  "module": "./dist/index.js",
+  "module": "./dist/index.esm.js",
   "types": "./dist/index.d.ts",
   "exports": {
     ".": {
-      "import": "./dist/index.js",
-      "require": "./cjs/index.cjs",
       "types": "./dist/index.d.ts",
-      "default": "./dist/index.js"
+      "import": "./dist/index.esm.js"
     }
   },
+  "sideEffects": false,
   "files": [
-    "dist/**/*",
-    "cjs/index.cjs",
+    "dist/index.d.ts",
+    "dist/index.esm.js",
     "README.md",
     "LICENSE"
   ],
@@ -83,9 +81,13 @@
     "access": "public"
   },
   "peerDependencies": {
-    "ethers": "^6.13.0"
+    "ethers": "^6"
   },
-  "dependencies": {},
+  "peerDependenciesMeta": {
+    "ethers": {
+      "optional": false
+    }
+  },
   "devDependencies": {
     "@types/chai": "^5.2.2",
     "@types/mocha": "^10.0.10",
@@ -96,6 +98,7 @@
     "mocha": "^11.5.0",
     "sinon": "^21.0.0",
     "ts-node": "^10.9.2",
+    "tsup": "^8.5.0",
     "tsx": "^4.19.4",
     "typescript": "^5.8.3"
   }

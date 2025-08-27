@@ -1,9 +1,5 @@
-import {
-  AbiCoder,
-  Interface,
-  Result as EthersResult,
-  Eip1193Provider,
-} from "ethers";
+import { AbiCoder, Interface, Result as EthersResult } from "ethers/abi";
+import type { Eip1193Provider } from "ethers/providers";
 import type { Call } from "./types";
 
 /**

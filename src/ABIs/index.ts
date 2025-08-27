@@ -1,4 +1,4 @@
-import { InterfaceAbi } from "ethers";
+import type { InterfaceAbi } from "ethers/abi";
 import { VERSION } from "../constants";
 
 export const MULTICALL3_ABI: InterfaceAbi = [

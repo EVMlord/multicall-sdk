@@ -1,5 +1,9 @@
-import { AbstractProvider, Contract, Eip1193Provider, Signer } from "ethers";
-
+import type {
+  AbstractProvider,
+  Eip1193Provider,
+  Signer,
+} from "ethers/providers";
+import { Contract } from "ethers/contract";
 import { ChainId } from "./constants";
 
 export type ProviderLike =

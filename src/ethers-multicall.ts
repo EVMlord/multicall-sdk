@@ -1,14 +1,13 @@
 import {
   Provider,
-  Interface,
   TransactionResponse,
-  Overrides,
-  Contract,
   JsonRpcProvider,
   BrowserProvider,
   AbstractProvider,
   WebSocketProvider,
-} from "ethers";
+} from "ethers/providers";
+import { Contract, type Overrides } from "ethers/contract";
+import { Interface } from "ethers/abi";
 import { addresses } from "./constants";
 import { Multicall3ABI } from "./ABIs";
 import type {
@@ -35,7 +34,8 @@ import {
 class Multicall {
   public readonly provider: Provider;
   public readonly target: string;
-  public readonly iface: Interface;
+  // public readonly iface: Interface;
+  public readonly iface: import("ethers").Interface;
   public readonly contract?: Contract;
 
   /**

@@ -1,6 +1,6 @@
 import { expect } from "chai";
 import { assert, createSandbox, match, SinonSandbox, SinonStub } from "sinon";
-import { Interface } from "ethers";
+import { Interface } from "ethers/abi";
 import {
   Multicall,
   MulticallRawResult,
@@ -26,7 +26,7 @@ describe("Multicall SDK", () => {
     provider = { call: sandbox.stub() };
 
     const args: MulticallConstructorArgs = {
-      chainId: ChainId.XRPLEVM_TESTNET,
+      chainId: ChainId.XRPL_EVM_TESTNET,
       provider: provider as any,
     };
 
@@ -350,9 +350,9 @@ describe("Multicall SDK", () => {
       sandbox
         .stub(sdk as any, "rpcCall")
         .withArgs("getChainId", [])
-        .resolves([ChainId.XRPLEVM_TESTNET]);
+        .resolves([ChainId.XRPL_EVM_TESTNET]);
 
-      expect(await sdk.getChainId()).to.equal(ChainId.XRPLEVM_TESTNET);
+      expect(await sdk.getChainId()).to.equal(ChainId.XRPL_EVM_TESTNET);
     });
   });
 });

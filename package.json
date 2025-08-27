@@ -5,8 +5,8 @@
   "scripts": {
     "alpha": "npm publish --tag alpha",
     "gen": "ts-node scripts/gen-multicall.ts",
-    "gen:readme": "ts-node scripts/generate-supported-networks.ts",
-    "gen:toc": "ts-node scripts/generate-toc.ts",
+    "gen:readme": "tsx scripts/generate-supported-networks.ts",
+    "gen:toc": "tsx scripts/generate-toc.ts",
     "build": "tsup",
     "typecheck": "tsc --noEmit",
     "prepublishOnly": "pnpm test && pnpm gen:readme && pnpm gen:toc && pnpm build",

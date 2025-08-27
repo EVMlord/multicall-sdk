@@ -10,7 +10,6 @@ A lightweight TypeScript/JavaScript library built on **ethers v6** for DeFi dash
 ![Minified bundle size](https://img.shields.io/bundlephobia/min/@evmlord/multicall-sdk)
 
 <!-- toc -->
-
 - [@evmlord/multicall-sdk – Batch smart-contract calls on Ethereum & EVM networks](#evmlordmulticall-sdk--batch-smart-contract-calls-on-ethereum--evm-networks)
   - [🚀 Why @evmlord/multicall-sdk?](#-why-evmlordmulticall-sdk)
   - [🔧 Installation (Node .js / TypeScript)](#-installation-node-js--typescript)
@@ -63,7 +62,7 @@ npm install @evmlord/multicall-sdk
 
 ## 📖 Quick-Start Example with ethers v6
 
-**<!-- CHAINS-COUNT -->285<!-- CHAINS-COUNT -->** EVM-compatible networks are supported by default, and custom networks can be supported by providing a deployed Multicall contract address.
+**<!-- CHAINS-COUNT -->287<!-- CHAINS-COUNT -->** EVM-compatible networks are supported by default, and custom networks can be supported by providing a deployed Multicall contract address.
 
 👉 See the complete list in [`SUPPORTED_NETWORKS.md`](./SUPPORTED_NETWORKS.md).
 

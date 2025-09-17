@@ -90,8 +90,9 @@ export function _fullyUnwrap(x: any): any {
     // If "_" holds an array, that's already unwrapped; return it.
     if (Array.isArray(inner)) return inner;
 
-    // If "_" holds an object, merge; named fields in `rest` win.
-    if (isPlainObject(inner)) return { ...inner, ...rest };
+    // If "_" holds an object, merge; if no extra fields, keep inner as-is.
+    if (isPlainObject(inner))
+      Object.keys(rest).length ? { ...inner, ...rest } : inner;
 
     // "_" holds a primitive: return `rest` if it has anything, else the primitive.
     return Object.keys(rest).length ? rest : inner;

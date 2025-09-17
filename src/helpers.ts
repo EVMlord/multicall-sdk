@@ -30,6 +30,13 @@ function isPlainObject(x: any): x is Record<string, any> {
   return !!x && typeof x === "object" && !Array.isArray(x);
 }
 
+function looksArrayLikeObject(x: any): boolean {
+  if (!isPlainObject(x)) return false;
+  const keys = Object.keys(x);
+  // empty {} from ethers for empty arrays, or objects whose keys are all numeric
+  return keys.length === 0 || keys.every((k) => String(+k) === k);
+}
+
 /**
  * Recursively “unwrap” anything returned by ethers.decodeFunctionResult (which is either
  *   • an `EthersResult` proxy (for named structs, or tuple/tuple[]), or
@@ -60,6 +67,13 @@ export function _fullyUnwrap(x: any): any {
       // If `v` really is a named struct (or array of named structs),
       // .toObject(true) will succeed:
       const obj = v.toObject(/* deep= */ true);
+
+      // ⚠️ ethers may yield {} or { "0": ..., "1": ... } for arrays (esp. empty)
+      if (Array.isArray(obj) || looksArrayLikeObject(obj)) {
+        const arr = v.toArray(/* deep */ false);
+        return arr.map((child) => _fullyUnwrap(child));
+      }
+
       // 🔧 Important: recurse so any nested "_" shells get peeled too
       return _fullyUnwrap(obj);
     } catch (_err) {
@@ -88,14 +102,14 @@ export function _fullyUnwrap(x: any): any {
     );
 
     // If "_" holds an array, that's already unwrapped; return it.
-    if (Array.isArray(inner)) return inner;
+    if (Array.isArray(inner)) return inner; // preserve arrays (even empty)
 
     // If "_" holds an object, merge; if no extra fields, keep inner as-is.
     if (isPlainObject(inner))
       Object.keys(rest).length ? { ...inner, ...rest } : inner;
 
     // "_" holds a primitive: return `rest` if it has anything, else the primitive.
-    return Object.keys(rest).length ? rest : inner;
+    return Object.keys(rest).length ? rest : inner; // primitive in "_"
   }
 
   // 4) Otherwise `v` is a primitive (string, bigint, number, boolean, etc.).

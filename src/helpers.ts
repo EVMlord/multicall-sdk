@@ -26,21 +26,6 @@ export function isEip1193Provider(x: any): x is Eip1193Provider {
   );
 }
 
-export function validateCall(call: Call): string {
-  try {
-    return call.contract.interface.encodeFunctionData(
-      call.functionFragment,
-      call.args
-    );
-  } catch (e) {
-    throw new Error(
-      `${decodeRevert(e, undefined, call.contract.interface)} "${
-        call.functionFragment
-      }" on ${call.contract.target}\n\n`
-    );
-  }
-}
-
 function isPlainObject(x: any): x is Record<string, any> {
   return !!x && typeof x === "object" && !Array.isArray(x);
 }
@@ -74,7 +59,9 @@ export function _fullyUnwrap(x: any): any {
       // --- CASE 1: named struct (or named‐struct[]) ---
       // If `v` really is a named struct (or array of named structs),
       // .toObject(true) will succeed:
-      return v.toObject(/* deep= */ true);
+      const obj = v.toObject(/* deep= */ true);
+      // 🔧 Important: recurse so any nested "_" shells get peeled too
+      return _fullyUnwrap(obj);
     } catch (_err) {
       // --- CASE 99: unnamed tuple or tuple[] ---
       // It wasn’t a named struct, so treat it as an unnamed tuple or tuple[]:
@@ -113,6 +100,21 @@ export function _fullyUnwrap(x: any): any {
   // 4) Otherwise `v` is a primitive (string, bigint, number, boolean, etc.).
   //    There’s nothing more to unwrap, so just return it:
   return v;
+}
+
+export function validateCall(call: Call): string {
+  try {
+    return call.contract.interface.encodeFunctionData(
+      call.functionFragment,
+      call.args
+    );
+  } catch (e) {
+    throw new Error(
+      `${decodeRevert(e, undefined, call.contract.interface)} "${
+        call.functionFragment
+      }" on ${call.contract.target}\n\n`
+    );
+  }
 }
 
 /**

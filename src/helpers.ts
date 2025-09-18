@@ -1,4 +1,10 @@
-import { AbiCoder, Interface, Result as EthersResult } from "ethers/abi";
+import {
+  AbiCoder,
+  Interface,
+  Result as EthersResult,
+  ParamType,
+  FunctionFragment,
+} from "ethers/abi";
 import type { Eip1193Provider } from "ethers/providers";
 import type { Call } from "./types";
 
@@ -35,6 +41,115 @@ function looksArrayLikeObject(x: any): boolean {
   const keys = Object.keys(x);
   // empty {} from ethers for empty arrays, or objects whose keys are all numeric
   return keys.length === 0 || keys.every((k) => String(+k) === k);
+}
+
+function peelUnderscoreShells(v: any): any {
+  let x = v;
+  while (isPlainObject(x) && "_" in x && Object.keys(x).length === 1) x = x._;
+  return x;
+}
+
+function asArrayLike(v: any): any[] {
+  // Normalize ethers oddities: {}, {"0":...} → array
+  if (isEthersResult(v)) return v.toArray(false);
+  if (Array.isArray(v)) return v;
+  if (isPlainObject(v)) {
+    if (looksArrayLikeObject(v)) {
+      return Object.keys(v)
+        .sort((a, b) => Number(a) - Number(b))
+        .map((k) => (v as any)[k]);
+    }
+    if (Object.keys(v).length === 0) return [];
+  }
+  // Last ditch (shouldn't normally hit when guided by ABI)
+  return Array.isArray(v) ? v : [v];
+}
+
+function isTupleParam(
+  p: ParamType
+): p is ParamType & { components: readonly ParamType[] } {
+  return p.baseType === "tuple" && Array.isArray(p.components);
+}
+
+export function tupleShouldBeObject(p: ParamType): boolean {
+  if (!isTupleParam(p)) return false;
+  return p.components.length > 0 && p.components.every((c) => !!c.name);
+}
+
+/** Unwrap while strictly preserving ABI shape */
+export function unwrapWithAbiShape(value: any, p: ParamType): any {
+  let v = peelUnderscoreShells(value);
+
+  switch (p.baseType) {
+    case "array": {
+      const items = asArrayLike(v);
+      const child = p.arrayChildren!;
+      return items.map((it) => unwrapWithAbiShape(it, child));
+    }
+
+    case "tuple": {
+      if (!isTupleParam(p) || p.components.length === 0) return []; // empty/invalid tuple
+
+      const items = asArrayLike(v);
+
+      // all named
+      if (p.components.every((c) => !!c.name)) {
+        const out: Record<string, any> = {};
+        p.components.forEach((c, i) => {
+          out[c.name!] = unwrapWithAbiShape(items[i], c);
+        });
+        return out;
+      }
+
+      return p.components.map((c, i) => unwrapWithAbiShape(items[i], c));
+    }
+
+    default:
+      // primitive types (address, uint256, bool, bytes, string, etc.)
+      if (isEthersResult(v)) {
+        // If ethers still wrapped it, take first element (scalars decode that way sometimes)
+        const arr = v.toArray(false);
+        return peelUnderscoreShells(arr.length ? arr[0] : v);
+      }
+      // If a lingering {_:...} wrapper existed deeper, we already peeled it.
+      return v;
+  }
+}
+
+function getFunctionStrict(
+  iface: Interface,
+  fragment: string | FunctionFragment
+): FunctionFragment {
+  if (typeof fragment !== "string") return fragment;
+  const fn = iface.getFunction(fragment);
+  if (fn == null) throw new Error(`Function not found in ABI: ${fragment}`);
+  return fn;
+}
+
+/** Convenience: decode + unwrap with ABI shape preserved */
+export function decodeAndUnwrap(
+  iface: Interface,
+  fragment: string, // function name or signature
+  data: string
+): any {
+  const fn = getFunctionStrict(iface, fragment); // <- guaranteed non-null
+  const decoded = iface.decodeFunctionResult(fn, data); // EthersResult, ok: string | FunctionFragment
+  const outputs = (fn.outputs ?? []) as readonly ParamType[]; // outputs can be empty
+
+  // No returns
+  if (outputs.length === 0) return undefined;
+
+  // Single return
+  if (outputs.length === 1) {
+    return unwrapWithAbiShape(decoded[0], outputs[0]);
+  }
+
+  // Multiple returns → treat as a tuple with the function’s outputs
+  const tupleParam = ParamType.from({
+    type: "tuple",
+    components: outputs.map((o) => ParamType.from(o.format("json"))),
+  });
+  return unwrapWithAbiShape(decoded, tupleParam);
 }
 
 /**

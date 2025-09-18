@@ -18,7 +18,8 @@ import type {
   MulticallResult,
 } from "./types";
 import {
-  _fullyUnwrap,
+  decodeAndUnwrap,
+  // _fullyUnwrap,
   decodeRevert,
   isEip1193Provider,
   validateCall,
@@ -215,21 +216,27 @@ class Multicall {
         ] as [boolean, any];
 
       try {
-        // Decode the returned bytes into an ethers.Result proxy
-        const decoded = calls[i].contract.interface.decodeFunctionResult(
+        // // Decode the returned bytes into an ethers.Result proxy
+        // const decoded = calls[i].contract.interface.decodeFunctionResult(
+        //   calls[i].functionFragment,
+        //   r.returnData
+        // );
+
+        // // If function has a *single* output, decoded.length === 1
+        // const rawOutput =
+        //   decoded.length === 1
+        //     ? decoded[0]
+        //     : // multiple outputs → toArray() gives [v0, v1, ...]
+        //       decoded.toArray(true);
+
+        // // Now fully unwrap rawOutput into a plain JS primitive/object/array:
+        // const plain = _fullyUnwrap(rawOutput);
+
+        const plain = decodeAndUnwrap(
+          calls[i].contract.interface,
           calls[i].functionFragment,
           r.returnData
         );
-
-        // If function has a *single* output, decoded.length === 1
-        const rawOutput =
-          decoded.length === 1
-            ? decoded[0]
-            : // multiple outputs → toArray() gives [v0, v1, ...]
-              decoded.toArray(true);
-
-        // Now fully unwrap rawOutput into a plain JS primitive/object/array:
-        const plain = _fullyUnwrap(rawOutput);
 
         return [true, plain] as [boolean, any];
       } catch (err: any) {
@@ -301,21 +308,27 @@ class Multicall {
         ] as [boolean, any];
 
       try {
-        // Decode the bytes into an ethers.Result proxy
-        const decodedResult = calls[i].contract.interface.decodeFunctionResult(
+        // // Decode the bytes into an ethers.Result proxy
+        // const decodedResult = calls[i].contract.interface.decodeFunctionResult(
+        //   calls[i].functionFragment,
+        //   r.returnData
+        // );
+
+        // // If function has a *single* output, decoded.length === 1
+        // const rawOutput =
+        //   decodedResult.length === 1
+        //     ? decodedResult[0]
+        //     : // multiple outputs → toArray() gives [v0, v1, ...]
+        //       decodedResult.toArray(true);
+
+        // // Now fully unwrap rawOutput into a plain JS primitive/object/array:
+        // const plain = _fullyUnwrap(rawOutput);
+
+        const plain = decodeAndUnwrap(
+          calls[i].contract.interface,
           calls[i].functionFragment,
           r.returnData
         );
-
-        // If function has a *single* output, decoded.length === 1
-        const rawOutput =
-          decodedResult.length === 1
-            ? decodedResult[0]
-            : // multiple outputs → toArray() gives [v0, v1, ...]
-              decodedResult.toArray(true);
-
-        // Now fully unwrap rawOutput into a plain JS primitive/object/array:
-        const plain = _fullyUnwrap(rawOutput);
 
         return [true, plain] as [boolean, any];
       } catch (err: any) {
@@ -400,21 +413,27 @@ class Multicall {
         ] as [boolean, any];
 
       try {
-        // decodeFunctionResult gives us an ethers `Result` proxy
-        const decoded = calls[i].contract.interface.decodeFunctionResult(
+        // // decodeFunctionResult gives us an ethers `Result` proxy
+        // const decoded = calls[i].contract.interface.decodeFunctionResult(
+        //   calls[i].functionFragment,
+        //   r.returnData
+        // );
+
+        // // If function has a *single* output, decoded.length === 1
+        // const rawOutput =
+        //   decoded.length === 1
+        //     ? decoded[0]
+        //     : // multiple outputs → deep array → toArray() gives [v0, v1, ...]
+        //       decoded.toArray(true);
+
+        // // Now fully unwrap rawOutput into a plain JS primitive/object/array:
+        // const plain = _fullyUnwrap(rawOutput);
+
+        const plain = decodeAndUnwrap(
+          calls[i].contract.interface,
           calls[i].functionFragment,
           r.returnData
         );
-
-        // If function has a *single* output, decoded.length === 1
-        const rawOutput =
-          decoded.length === 1
-            ? decoded[0]
-            : // multiple outputs → deep array → toArray() gives [v0, v1, ...]
-              decoded.toArray(true);
-
-        // Now fully unwrap rawOutput into a plain JS primitive/object/array:
-        const plain = _fullyUnwrap(rawOutput);
 
         return [true, plain] as [boolean, any];
       } catch (err: any) {
@@ -483,20 +502,26 @@ class Multicall {
         ] as [boolean, any];
 
       try {
-        const decoded = calls[i].contract.interface.decodeFunctionResult(
+        // const decoded = calls[i].contract.interface.decodeFunctionResult(
+        //   calls[i].functionFragment,
+        //   r.returnData
+        // );
+
+        // // If function has a *single* output, decoded.length === 1
+        // const rawOutput =
+        //   decoded.length === 1
+        //     ? decoded[0]
+        //     : // multiple outputs → toArray() gives [v0, v1, ...]
+        //       decoded.toArray(true);
+
+        // // Now fully unwrap rawOutput into a plain JS primitive/object/array:
+        // const plain = _fullyUnwrap(rawOutput);
+
+        const plain = decodeAndUnwrap(
+          calls[i].contract.interface,
           calls[i].functionFragment,
           r.returnData
         );
-
-        // If function has a *single* output, decoded.length === 1
-        const rawOutput =
-          decoded.length === 1
-            ? decoded[0]
-            : // multiple outputs → toArray() gives [v0, v1, ...]
-              decoded.toArray(true);
-
-        // Now fully unwrap rawOutput into a plain JS primitive/object/array:
-        const plain = _fullyUnwrap(rawOutput);
 
         return [true, plain] as [boolean, any];
       } catch (err: any) {

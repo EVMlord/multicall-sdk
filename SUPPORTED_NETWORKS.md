@@ -2,7 +2,7 @@
 
 Automatically generated – do **not** edit by hand.
 
-_Last updated: 2025-09-18_
+_Last updated: 2025-10-29_
 
 | Chain | Chain ID | Contract |
 |-------|---------:|------------------------------------------|

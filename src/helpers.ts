@@ -129,7 +129,7 @@ function getFunctionStrict(
 /** Convenience: decode + unwrap with ABI shape preserved */
 export function decodeAndUnwrap(
   iface: Interface,
-  fragment: string, // function name or signature
+  fragment: string | FunctionFragment,
   data: string
 ): any {
   const fn = getFunctionStrict(iface, fragment); // <- guaranteed non-null
@@ -145,9 +145,12 @@ export function decodeAndUnwrap(
   }
 
   // Multiple returns → treat as a tuple with the function’s outputs
+  // Build a tuple ParamType from REAL objects, not JSON strings
+  const outputsObjs = outputs.map((o) => JSON.parse(o.format("json")));
   const tupleParam = ParamType.from({
     type: "tuple",
-    components: outputs.map((o) => ParamType.from(o.format("json"))),
+    // components: outputs.map((o) => ParamType.from(o.format("json"))),
+    components: outputsObjs, // array of JSON objects
   });
   return unwrapWithAbiShape(decoded, tupleParam);
 }

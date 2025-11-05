@@ -35,8 +35,8 @@ import {
 class Multicall {
   public readonly provider: Provider;
   public readonly target: string;
-  // public readonly iface: Interface;
-  public readonly iface: import("ethers").Interface;
+  public readonly iface: Interface;
+  // public readonly iface: import("ethers").Interface;
   public readonly contract?: Contract;
 
   /**
@@ -114,12 +114,19 @@ class Multicall {
   private async rpcCall<T extends any[]>(
     method: string,
     params: any[],
-    value?: bigint
+    value?: bigint,
+    overrides: Overrides = {}
   ): Promise<T> {
     // ABI‐encode the call
     const data = this.iface.encodeFunctionData(method, params);
+
     // Simulate via eth_call
-    const raw = await this.provider.call({ to: this.target, data, value });
+    const raw = await this.provider.call({
+      to: this.target,
+      data,
+      value,
+      ...overrides,
+    });
     // Decode into Ethers’s Result class, then cast to T
     return this.iface.decodeFunctionResult(method, raw) as unknown as T;
   }
@@ -135,6 +142,17 @@ class Multicall {
    *   - `functionFragment`: the ABI name or Fragment of the function to call
    *   - `args`: the arguments for that function
    *
+   * @param overrides
+   *   Optional call overrides:
+   *   - `from` (optional): address to use as `msg.sender` for the read
+   *   - `blockTag` (optional): block number or tag at which to read state
+   *       • e.g. `blockTag: 18_000_000n` to query a historical block
+   *       • e.g. `blockTag: "latest" | "finalized" | "safe"` for tag-based reads
+   *   - Other transaction fields that ethers allows (e.g. `gasLimit`, `gasPrice`, etc.)
+   *
+   *   Note: this method is always a read (`eth_call`); it does not submit a transaction
+   *   or change on-chain state. Any `value` provided is only used for call simulation.
+   *
    * @returns
    *   A Promise resolving to an object:
    *   - `blockNumber: bigint` — the block in which the calls were executed
@@ -145,7 +163,8 @@ class Multicall {
    * in a try/catch to handle on-chain reverts and decode each entry in `returnData`.
    */
   async aggregate(
-    calls: Call[]
+    calls: Call[],
+    overrides: Overrides = {}
   ): Promise<{ blockNumber: bigint; returnData: string[] }> {
     const payload = calls.map(({ contract, functionFragment, args }) => ({
       target: contract.target,
@@ -154,7 +173,9 @@ class Multicall {
 
     const [blockNumber, returnData] = await this.rpcCall<[bigint, string[]]>(
       "aggregate",
-      [payload]
+      [payload],
+      undefined,
+      overrides
     );
 
     return { blockNumber, returnData };
@@ -175,6 +196,17 @@ class Multicall {
    *   - `functionFragment`: the ABI name/signature of the function to call
    *   - `args`: the arguments for that function
    *
+   * @param overrides
+   *   Optional call overrides:
+   *   - `from` (optional): address to use as `msg.sender` for the read
+   *   - `blockTag` (optional): block number or tag at which to read state
+   *       • e.g. `blockTag: 18_000_000n` to query a historical block
+   *       • e.g. `blockTag: "latest" | "finalized" | "safe"` for tag-based reads
+   *   - Other transaction fields that ethers allows (e.g. `gasLimit`, `gasPrice`, etc.)
+   *
+   *   Note: this method is always a read (`eth_call`); it does not submit a transaction
+   *   or change on-chain state. Any `value` provided is only used for call simulation.
+   *
    * @returns
    *   A Promise resolving to an array of tuples `[success: boolean, data: any]`,
    *   in the same order as `calls`:
@@ -189,7 +221,8 @@ class Multicall {
    */
   async tryAggregate(
     requireSuccess: boolean,
-    calls: Call[]
+    calls: Call[],
+    overrides: Overrides = {}
   ): Promise<Array<[boolean, any]>> {
     // Build the call payload
     const payload = calls.map(({ contract, functionFragment, args }) => ({
@@ -200,7 +233,9 @@ class Multicall {
     // Solidity signature: returns (Result[] memory), so decodeFunctionResult gives [MulticallResult[]]
     const [rawResults] = await this.rpcCall<[MulticallResult[]]>(
       "tryAggregate",
-      [requireSuccess, payload]
+      [requireSuccess, payload],
+      undefined,
+      overrides
     );
 
     return rawResults.map((r, i) => {
@@ -262,6 +297,17 @@ class Multicall {
    *   - `functionFragment`: the name/signature of the function to call
    *   - `args`: the arguments for that function
    *
+   * @param overrides
+   *   Optional call overrides:
+   *   - `from` (optional): address to use as `msg.sender` for the read
+   *   - `blockTag` (optional): block number or tag at which to read state
+   *       • e.g. `blockTag: 18_000_000n` to query a historical block
+   *       • e.g. `blockTag: "latest" | "finalized" | "safe"` for tag-based reads
+   *   - Other transaction fields that ethers allows (e.g. `gasLimit`, `gasPrice`, etc.)
+   *
+   *   Note: this method is always a read (`eth_call`); it does not submit a transaction
+   *   or change on-chain state. Any `value` provided is only used for call simulation.
+   *
    * @returns
    *   A Promise resolving to an object:
    *   - `blockNumber: bigint` — the block in which the calls were executed
@@ -278,7 +324,8 @@ class Multicall {
    */
   async tryBlockAndAggregate(
     requireSuccess: boolean,
-    calls: Call[]
+    calls: Call[],
+    overrides: Overrides = {}
   ): Promise<{
     blockNumber: bigint;
     blockHash: string;
@@ -293,7 +340,7 @@ class Multicall {
     // Solidity returns (uint256, bytes32, Result[]), so decodeFunctionResult gives [bigint, string, MulticallResult[]]
     const [blockNumber, blockHash, rawResults] = await this.rpcCall<
       [bigint, string, MulticallResult[]]
-    >("tryBlockAndAggregate", [requireSuccess, payload]);
+    >("tryBlockAndAggregate", [requireSuccess, payload], undefined, overrides);
 
     const decoded = rawResults.map((r, i) => {
       if (!r.success)
@@ -344,6 +391,18 @@ class Multicall {
    * Internally this is just `tryBlockAndAggregate(true, calls)`.
    *
    * @param calls - Array of Call objects (each with a contract, functionFragment, and args).
+   *
+   * @param overrides
+   *   Optional call overrides:
+   *   - `from` (optional): address to use as `msg.sender` for the read
+   *   - `blockTag` (optional): block number or tag at which to read state
+   *       • e.g. `blockTag: 18_000_000n` to query a historical block
+   *       • e.g. `blockTag: "latest" | "finalized" | "safe"` for tag-based reads
+   *   - Other transaction fields that ethers allows (e.g. `gasLimit`, `gasPrice`, etc.)
+   *
+   *   Note: this method is always a read (`eth_call`); it does not submit a transaction
+   *   or change on-chain state. Any `value` provided is only used for call simulation.
+   *
    * @returns A promise resolving to an object:
    *   - `blockNumber: bigint` – the block where these calls were executed
    *   - `blockHash: string`  – the hash of that block
@@ -351,12 +410,15 @@ class Multicall {
    *       • success=true  ⇒ `any` is the fully‐decoded, plain-JS result (primitive, array, or object)
    *       • success=false ⇒ `any` is the raw revert data hex (the batch will actually have reverted)
    */
-  async blockAndAggregate(calls: Call[]): Promise<{
+  async blockAndAggregate(
+    calls: Call[],
+    overrides: Overrides = {}
+  ): Promise<{
     blockNumber: bigint;
     blockHash: string;
     returnData: Array<[boolean, any]>;
   }> {
-    return this.tryBlockAndAggregate(true, calls);
+    return this.tryBlockAndAggregate(true, calls, overrides);
   }
 
   /**
@@ -372,6 +434,17 @@ class Multicall {
    *   - `args`: the arguments for that function
    *   - `allowFailure`: whether this call may fail without bubbling up
    *
+   * @param overrides
+   *   Optional call overrides:
+   *   - `from` (optional): address to use as `msg.sender` for the read
+   *   - `blockTag` (optional): block number or tag at which to read state
+   *       • e.g. `blockTag: 18_000_000n` to query a historical block
+   *       • e.g. `blockTag: "latest" | "finalized" | "safe"` for tag-based reads
+   *   - Other transaction fields that ethers allows (e.g. `gasLimit`, `gasPrice`, etc.)
+   *
+   *   Note: this method is always a read (`eth_call`); it does not submit a transaction
+   *   or change on-chain state. Any `value` provided is only used for call simulation.
+   *
    * @returns
    *   A Promise resolving to an array of `[success, data]` tuples, in the same order:
    *   - If `success === true`, `data` is already a plain‐JS value:
@@ -384,7 +457,10 @@ class Multicall {
    *       • Custom Solidity errors (`MyError(arg1,arg2)`)
    *       • Fallback snippet `(unrecognized revert: 0x…)`
    */
-  async aggregate3(calls: Call3[]): Promise<Array<[boolean, any]>> {
+  async aggregate3(
+    calls: Call3[],
+    overrides: Overrides = {}
+  ): Promise<Array<[boolean, any]>> {
     // Build the multicall payload
     const payload = calls.map(
       ({ contract, functionFragment, args, allowFailure }) => ({
@@ -395,9 +471,12 @@ class Multicall {
     );
 
     // Execute the RPC
-    const [rawResults] = await this.rpcCall<[MulticallResult[]]>("aggregate3", [
-      payload,
-    ]);
+    const [rawResults] = await this.rpcCall<[MulticallResult[]]>(
+      "aggregate3",
+      [payload],
+      undefined,
+      overrides
+    );
 
     // Decode + unwrap each return
     return rawResults.map((r, i) => {
@@ -456,6 +535,18 @@ class Multicall {
    *   - `value`: the amount of native ETH (in wei) to send with that call
    *   - `allowFailure`: whether this call may fail without bubbling up
    *
+   * @param overrides
+   *   Optional call overrides:
+   *
+   *   - `from` (optional): address to use as `msg.sender` for the read
+   *   - `blockTag` (optional): block number or tag at which to read state
+   *       • e.g. `blockTag: 18_000_000n` to query a historical block
+   *       • e.g. `blockTag: "latest" | "finalized" | "safe"` for tag-based reads
+   *   - Other transaction fields that ethers allows (e.g. `gasLimit`, `gasPrice`, etc.)
+   *
+   *   Note: this method is always a read (`eth_call`); it does not submit a transaction
+   *   or change on-chain state. Any `value` provided is only used for call simulation.
+   *
    * @returns
    *   A Promise resolving to an array of `[success, data]` tuples, in the same order:
    *   - If `success === true`, `data` is already a plain‐JS value:
@@ -468,7 +559,10 @@ class Multicall {
    *       • Custom Solidity errors (`MyError(arg1,arg2)`)
    *       • Fallback snippet `(unrecognized revert: 0x…)`
    */
-  async aggregate3Value(calls: Call3Value[]): Promise<Array<[boolean, any]>> {
+  async aggregate3Value(
+    calls: Call3Value[],
+    overrides: Overrides = {}
+  ): Promise<Array<[boolean, any]>> {
     // Build the multicall3Value payload
     const payload = calls.map(
       ({ contract, functionFragment, args, allowFailure, value }) => ({
@@ -486,7 +580,8 @@ class Multicall {
     const [rawResults] = await this.rpcCall<[MulticallResult[]]>(
       "aggregate3Value",
       [payload],
-      totalValue
+      totalValue,
+      overrides
     );
 
     return rawResults.map((r, i) => {

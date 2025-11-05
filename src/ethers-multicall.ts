@@ -35,8 +35,8 @@ import {
 class Multicall {
   public readonly provider: Provider;
   public readonly target: string;
-  public readonly iface: Interface;
-  // public readonly iface: import("ethers").Interface;
+  // public readonly iface: Interface;
+  public readonly iface: import("ethers").Interface;
   public readonly contract?: Contract;
 
   /**

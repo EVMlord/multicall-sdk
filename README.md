@@ -6,10 +6,12 @@ A lightweight TypeScript/JavaScript library built on **ethers v6** for DeFi dash
 [![CI Build Status](https://github.com/EVMlord/multicall-sdk/actions/workflows/ci.yml/badge.svg)](https://github.com/EVMlord/multicall-sdk/actions/workflows/ci.yml)
 ![MIT license for @evmlord/multicall-sdk](https://img.shields.io/npm/l/@evmlord/multicall-sdk)
 ![Weekly npm downloads for @evmlord/multicall-sdk](https://img.shields.io/npm/dw/@evmlord/multicall-sdk)
+[![All npm downloads for @evmlord/multicall-sdk][downloads-img]][downloads-url]
 ![TypeScript types included](https://img.shields.io/badge/types-included-blue)
 ![Minified bundle size](https://img.shields.io/bundlephobia/min/@evmlord/multicall-sdk)
 
 <!-- toc -->
+
 - [@evmlord/multicall-sdk – Batch smart-contract calls on Ethereum & EVM networks](#evmlordmulticall-sdk--batch-smart-contract-calls-on-ethereum--evm-networks)
   - [🚀 Why @evmlord/multicall-sdk?](#-why-evmlordmulticall-sdk)
   - [🔧 Installation (Node .js / TypeScript)](#-installation-node-js--typescript)

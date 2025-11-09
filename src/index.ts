@@ -5,8 +5,6 @@ export { ChainId, getMulticallAddress } from "./constants";
 export { Multicall3ABI } from "./ABIs";
 
 // the Multicall class + its types
-export { default as Multicall } from "./ethers-multicall";
-
 export type {
   Call,
   Call3,
@@ -14,3 +12,5 @@ export type {
   ConstructorArgs as MulticallConstructorArgs,
   MulticallResult as MulticallRawResult,
 } from "./types";
+
+export { default as Multicall } from "./ethers-multicall";

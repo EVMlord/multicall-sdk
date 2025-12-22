@@ -90,7 +90,7 @@
     "@types/chai": "^5.2.2",
     "@types/mocha": "^10.0.10",
     "@types/node": "^24.0.3",
-    "@types/sinon": "^17.0.4",
+    "@types/sinon": "^21.0.0",
     "chai": "^5.2.0",
     "ethers": "^6.13.0",
     "mocha": "^11.5.0",
